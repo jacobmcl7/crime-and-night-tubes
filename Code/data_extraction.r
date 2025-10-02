@@ -28,8 +28,14 @@ for (j in 2016:2017) {
 }
 
 # drop irrelevant columns
-crime_data <- crime_data %>%
+crime_data <- as.data.frame(crime_data) %>%
     select(-c(Crime.ID, Reported.by, Falls.within, Location, Context))
+
+# drop observations with no coordinates
+crime_data <- crime_data %>%
+    filter(!is.na(Longitude) & !is.na(Latitude))
 
 # export this as an excel file to be read into ArcGIS
 write.xlsx(crime_data, 'Data/london_crime_data.xlsx')
+
+# note: this exports strangely. We have to open it in excel and re-save it to allow ArcGIS to read it in properly.
