@@ -24,7 +24,7 @@ for (year in 2015:2017) {
     
     # drop irrelevant columns
     crime_data <- as.data.frame(crime_data) %>%
-        select(-c(Crime.ID, Reported.by, Falls.within, Context))
+        select(-c(Reported.by, Falls.within, Context))
     
     # drop observations with no coordinates
     crime_data <- crime_data %>%

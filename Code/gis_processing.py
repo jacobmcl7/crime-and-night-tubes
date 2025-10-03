@@ -54,11 +54,14 @@ for year in years:
         target_features=f"london_crime_d_{year}_ConvertCoordi",
         join_features=buffer_output,
         out_feature_class=spatial_join_output,
+        join_operation="JOIN_ONE_TO_MANY",  # so every single buffer is recorded!
         join_type="KEEP_ALL",
         match_option="INTERSECT",
         search_radius=None,
         distance_field_name=None
     )
+
+    # ISSUE: in the spatial join it only seems to pick one buffer zone if it is in multiple. Need to sort this out
 
     # export the data as an excel file
     arcpy.conversion.TableToExcel(
