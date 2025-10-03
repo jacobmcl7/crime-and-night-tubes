@@ -1,5 +1,7 @@
 # this file contains the code for the spatial processing in ArcGIS
 
+# this must be run through the Python window in ArcGIS, in the project titled crime_data_geocoding saved in the appropriate directory
+
 # insert the shapefile for stations
 tube_stations = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes\Data\Underground_Stations\Underground_Stations.shp"
 tube_stations = arcpy.management.MakeFeatureLayer(tube_stations, "tube_stations")
