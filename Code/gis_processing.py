@@ -4,7 +4,7 @@
 tube_stations = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes\Data\Underground_Stations\Underground_Stations.shp"
 tube_stations = arcpy.management.MakeFeatureLayer(tube_stations, "tube_stations")
 
-# create a 250m buffer around each station
+# create a 250m buffer around each station (arbitrary, and will be varied)
 buffer_output = fr"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\tube_stations_PairwiseBuffer"
 arcpy.analysis.PairwiseBuffer(
     in_features="tube_stations",
