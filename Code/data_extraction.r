@@ -24,12 +24,16 @@ for (year in 2015:2017) {
     
     # drop irrelevant columns
     crime_data <- as.data.frame(crime_data) %>%
-        select(-c(Reported.by, Falls.within, Context))
+        select(-c(Crime.ID, Reported.by, Falls.within, Context))
     
     # drop observations with no coordinates
     crime_data <- crime_data %>%
         filter(!is.na(Longitude) & !is.na(Latitude))
-    
+
+    # generate a unique identifier for each crime, given by 'year'-'row number' (have to do this since the crime.id in the data is occasionally missing)
+    crime_data <- crime_data %>%
+        mutate(crime_id = paste0(year, "-", row_number()))
+
     # export this as an excel file to be read into ArcGIS
     write_xlsx(crime_data, paste0("Crime and night tubes EXTRA DATA/london_crime_data-", year, ".xlsx"))
 }
