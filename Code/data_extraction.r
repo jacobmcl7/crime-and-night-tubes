@@ -144,18 +144,39 @@ location_info <- location_info %>%
 
 
 # now merge the monthly counts with the location info, on the location variable
-final_data <- merge(monthly_counts, location_info, by = "location", all.x = TRUE) %>%
+temp <- merge(monthly_counts, location_info, by = "location", all.x = TRUE) %>%
     arrange(location, Month) %>%
 
     # now concatenate all lines together, to then sort through to determine treatment
-    unite("all_lines", starts_with("LINES"), sep = ", ", na.rm = TRUE)
+    mutate(all_lines = apply(select(., starts_with("LINES")), 1, function(x) paste(na.omit(x), collapse = ", "))) %>%
 
     # now make a variable for whether within 500m of a station
-    mutate(near_station == !is.na(NAME1)) %>%
+    mutate(near_station = as.numeric(!is.na(NAME1))) %>%
 
     # now make one for whether within 500m of a station on each of the night tube lines (Central, Jubilee, Northern, Piccadilly, Victoria)
-    mutate(near_station_central == str_detect(all_lines, "Central")) %>%
-    mutate(near_station_jubilee == str_detect(all_lines, "Jubilee")) %>%
-    mutate(near_station_northern == str_detect(all_lines, "Northern")) %>%
-    mutate(near_station_piccadilly == str_detect(all_lines, "Piccadilly")) %>%
-    mutate(near_station_victoria == str_detect(all_lines, "Victoria"))
+    mutate(near_station_central = as.numeric(str_detect(all_lines, "Central"))) %>%
+    mutate(near_station_jubilee = as.numeric(str_detect(all_lines, "Jubilee"))) %>%
+    mutate(near_station_northern = as.numeric(str_detect(all_lines, "Northern"))) %>%
+    mutate(near_station_piccadilly = as.numeric(str_detect(all_lines, "Piccadilly"))) %>%
+    mutate(near_station_victoria = as.numeric(str_detect(all_lines, "Victoria"))) %>%
+
+    # now adjust months from 2015-01 to 1, and increase in units of 1, and call this the period
+    mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015)) %>%
+
+    # now create a treatment variable for any observation that is within 500m of a station with an active night tube
+    mutate(treatment = as.numeric((near_station_central == 1 & period >= 20) |
+                                  (near_station_jubilee == 1 & period >= 22) |
+                                  (near_station_northern == 1 & period >= 23) |
+                                  (near_station_piccadilly == 1 & period >= 24) |
+                                  (near_station_victoria == 1 & period >= 20)))
+    # note that the first treatment months of each station are:
+    # Central: 19 Aug 2016 (first treatment month = 12 + 8 = 20)
+    # Victoria: 19 Aug 2016 (ftm = 20)
+    # Jubilee: 7 Oct 2016 (ftm = 22)
+    # Northern: 18 Nov 2016 (ftm = 23)
+    # Piccadilly: 16 Dec 2016 (ftm = 24)
+
+
+
+# export the data
+save(final_data, file = "Crime and night tubes EXTRA DATA/final_data.RData")
