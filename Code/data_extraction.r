@@ -1,5 +1,6 @@
 # this extracts the data to create one large dataset of dated crimes that can be geocoded
 
+library(readxl)
 library(writexl)
 library(tidyverse)
 
@@ -37,3 +38,53 @@ for (year in 2015:2017) {
     # export this as an excel file to be read into ArcGIS
     write_xlsx(crime_data, paste0("Crime and night tubes EXTRA DATA/london_crime_data-", year, ".xlsx"))
 }
+
+
+
+
+#####################################################################
+#####################################################################
+# THE ARCGIS PROCESSING HAPPENS HERE
+#####################################################################
+#####################################################################
+
+
+
+# now merge together the files produced by ArcGIS
+
+# load in the 2015 crime-station pairs
+cs_pairs <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/crime_station_pairs_2015.xlsx"))
+
+# append them with the pairs from the later years
+for (year in 2016:2017) {
+    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/crime_station_pairs_", year, ".xlsx")))
+    cs_pairs <- rbind(cs_pairs, temp)
+}
+
+# clear the extras from the environment
+rm(c(temp, year))
+
+# drop the id column inserted by ArcGIS, and save the dataset
+cs_pairs <- cs_pairs %>%
+    select(-c(OBJECTID)) %>%
+    save("Crime and night tubes EXTRA DATA/cs_pairs.Rda")
+
+# this is now ready to be merged in
+
+
+
+# now deal with the station data, coming from crime_data
+
+# first read it in and combine it in the same way
+crime_data <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/london_crime_data-2015.xlsx"))
+
+# append it with the other years, as before
+for (year in 2016:2017) {
+    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/london_crime_data-", year, ".xlsx")))
+    crime_data <- rbind(crime_data, temp)
+    rm(temp)
+}
+
+
+# now merge the cs_pairs in, on the variable 'crime_id', in a one-to-many way
+full_data <- merge(cs_pairs, crime_data, by = "crime_id", all.x = TRUE)
