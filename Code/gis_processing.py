@@ -44,12 +44,12 @@ for year in years:
         exclude_invalid_records="INCLUDE_INVALID"
     )
 
-    # make a near table, of all stations within 2km
+    # make a near table, of all stations within 0.5km
     arcpy.analysis.GenerateNearTable(
         in_features="geolocated_data",
         near_features="tube_stations",
         out_table=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\near_table",
-        search_radius="2 Kilometers",
+        search_radius="0.5 Kilometers",
         location="NO_LOCATION",
         angle="NO_ANGLE",
         closest="ALL",
@@ -96,6 +96,13 @@ for year in years:
         Use_field_alias_as_column_header="NAME",
         Use_domain_and_subtype_description="CODE"
     )
+
+
+# note: I think there are too many pairs when we do it like this - the excel files get corrupted/broken, probably because the file is too big
+# two things to do:
+# - split the data up into more subfiles in the R section
+# - look over a shorter distance from the station
+# DONE NOW - DISTANCE CHANGED TO 0.5KM AND IT WORKS
 
 
 
