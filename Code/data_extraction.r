@@ -6,39 +6,60 @@ library(tidyverse)
 
 setwd("~/Economics/Papers (WIP)")
 
-# make a different datafile for each year, so the files aren't too big
 
-for (year in 2015:2017) {
+# load in the first month of 2015 data
+crime_data <- read.csv("Crime and night tubes/Data/2015-01/2015-01-metropolitan-street.csv", stringsAsFactors = FALSE)
 
-    # load in the first month of the year data
-    crime_data <- as.data.frame(read.csv(paste0("Crime and night tubes/Data/", year, "-01/", year, "-01-metropolitan-street.csv"), stringsAsFactors = FALSE))
-    
-    # merge with the rest of the data
-    for (i in 2:12) {
+# merge with the rest of the data
+for (i in 2:12) {
+    # get the correct month format
+    month <- ifelse(i < 10, paste0("0", i), i)
+    # read in the data
+    temp_data <- read.csv(paste0("Crime and night tubes/Data/2015-", month, "/2015-", month, "-metropolitan-street.csv"), stringsAsFactors = FALSE)
+    # merge with the main dataset
+    crime_data <- rbind(crime_data, temp_data)
+}  
+
+for (j in 2016:2017) {
+    for (i in 1:12) {
         # get the correct month format
         month <- ifelse(i < 10, paste0("0", i), i)
-        # read in the data
-        temp_data <- as.data.frame(read.csv(paste0("Crime and night tubes/Data/", year, "-", month, "/", year, "-", month, "-metropolitan-street.csv"), stringsAsFactors = FALSE))
-        # merge with the main dataset
+        temp_data <- read.csv(paste0("Crime and night tubes/Data/", j, "-", month, "/", j, "-", month, "-metropolitan-street.csv"), stringsAsFactors = FALSE)
         crime_data <- rbind(crime_data, temp_data)
-    }
-    
-    # drop irrelevant columns
-    crime_data <- as.data.frame(crime_data) %>%
-        select(-c(Crime.ID, Reported.by, Falls.within, Context))
-    
-    # drop observations with no coordinates
-    crime_data <- crime_data %>%
-        filter(!is.na(Longitude) & !is.na(Latitude))
-
-    # generate a unique identifier for each crime, given by 'year'-'row number' (have to do this since the crime.id in the data is occasionally missing)
-    crime_data <- crime_data %>%
-        mutate(crime_id = paste0(year, "-", row_number()))
-
-    # export this as an excel file to be read into ArcGIS
-    write_xlsx(crime_data, paste0("Crime and night tubes EXTRA DATA/london_crime_data-", year, ".xlsx"))
+    }  
 }
 
+
+# now do some processing
+crime_data <- as.data.frame(crime_data) %>%
+    # drop irrelevant columns
+    select(-c(Crime.ID, Reported.by, Falls.within, Context)) %>%
+
+    # drop observations with no coordinates
+    filter(!is.na(Longitude) & !is.na(Latitude)) %>%
+
+    # generate a unique identifier for each crime, given by 'year'-'row number' (have to do this since the crime.id in the data is occasionally missing)
+    mutate(crime_id = paste0(Month, "-", row_number()))
+
+
+# now generate the data we will need for the geoprocessing - specifically, every unique location (i.e. longitude-latitude pair) in the data
+geocoding_data <- crime_data %>%
+    select(c(Longitude, Latitude)) %>%
+    distinct()
+
+# there are 63294 distinct locations of crime - these will be geocoded and related to tube station locations in the gis_processing file
+
+# split into three different files, so that ArcGIS can calculate distances to further away tube stations without crashing
+
+# export this as an excel file, for the geocoding
+# in fact, export as three different excel files, so that ArcGIS can calculate distances to further away tube stations without crashing
+write_xlsx(geocoding_data[1:floor(nrow(geocoding_data) / 3), ], "Crime and night tubes EXTRA DATA/london_crime_locations_1.xlsx")
+write_xlsx(geocoding_data[(floor(nrow(geocoding_data) / 3) + 1):(floor(2 * nrow(geocoding_data) / 3)), ], "Crime and night tubes EXTRA DATA/london_crime_locations_2.xlsx")
+write_xlsx(geocoding_data[(floor(2 * nrow(geocoding_data) / 3) + 1):nrow(geocoding_data), ], "Crime and night tubes EXTRA DATA/london_crime_locations_3.xlsx")
+
+
+# save the crime data as an R datafile so that we can merge back in the geolocated data later
+save(crime_data, file = "Crime and night tubes EXTRA DATA/individual_crime_data.RData")
 
 
 
@@ -50,91 +71,29 @@ for (year in 2015:2017) {
 
 
 
-# now merge together the files produced by ArcGIS
+# now clean the location data we have just generated
 
-# load in the 2015 crime-station pairs
-cs_pairs <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/crime_station_pairs_2015.xlsx"))
+# load in the first file of location-station pairs
+ls_pairs <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/location_station_pairs_1.xlsx"))
 
-# append them with the pairs from the later years
-for (year in 2016:2017) {
-    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/crime_station_pairs_", year, ".xlsx")))
-    cs_pairs <- rbind(cs_pairs, temp)
+# append them with the pairs from the next files
+for (i in 2:3) {
+    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/location_station_pairs_", i, ".xlsx")))
+    ls_pairs <- rbind(ls_pairs, temp)
 }
 
-# clear the extras from the environment
-rm(temp)
-rm(year)
-
-# drop the id column inserted by ArcGIS
-cs_pairs <- cs_pairs %>%
-    select(-c(OBJECTID))
-
-# this is now ready to be merged in
-
-
-
-# now deal with the station data, coming from crime_data
-
-# first read it in and combine it in the same way
-crime_data <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/london_crime_data-2015.xlsx"))
-
-# append it with the other years, as before
-for (year in 2016:2017) {
-    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/london_crime_data-", year, ".xlsx")))
-    crime_data <- rbind(crime_data, temp)
-    rm(temp)
-}
-
-# keep environment clean
-rm(year)
-
-
-# now merge the cs_pairs in, on the variable 'crime_id', in a one-to-many way
-full_data <- merge(crime_data, cs_pairs, by = "crime_id", all.x = TRUE)
-
-
-
-#################################################################
-#################################################################
-# full_data contains everything we want: we can now work with it to create the dataset for analysis
-#################################################################
-#################################################################
-
-
-# crimes are recorded at finely grouped locations: reshape to get the number of crimes in each longitude-latitude pair by month
-monthly_counts <- full_data %>%
-    group_by(Month, Longitude, Latitude) %>%
-    summarise(num_crimes = n()) %>%
-    ungroup()
-
-# now we need to add 0s for all months in which no crimes were recorded in given months for any observation
-
-# first concatenate the longitude and latitude to make it just one variable
-monthly_counts <- monthly_counts %>%
-    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
-    select(-c(Latitude, Longitude)) %>%
-
-    # now for every combination of location and month that isn't in the data, add a row with num_crimes = 0
-    complete(Month, location, fill = list(num_crimes = 0))
-
-
-# now we need to get information for each location as to whether it is near a given tube station, and which one
-
-# get all longitude-latitude-station_info combinations in the full_data
-location_info <- full_data %>%
-    select(c(Longitude, Latitude, NEAR_DIST, NAME, LINES)) %>%
-    distinct() %>%
+# do some cleaning of the data
+ls_pairs <- ls_pairs %>%
+    # drop the id column inserted by ArcGIS
+    select(-c(OBJECTID)) %>%
 
     # join longitude and latitude into one location variable, as before
     mutate(location = paste0(Latitude, ", ", Longitude)) %>%
     select(-c(Longitude, Latitude))
 
-    # note that lon+lat uniquely define the other three variables, since they are obtained through the geocoding which depends on lon+lat
-    # thus no duplicate locations, unless they are within 500m of multiple stations (in which case, one for each station)
-
-# now reshape the data to give one observation per location
+# now reshape it to give one observation per location, with all the relevant station info in it
 # if an location has multiple observations with different names, near_dist and lines, make new variables name2, near_dist2 and lines2 that hold these new values
-location_info <- location_info %>%
+location_info <- ls_pairs %>%
     # number each observation for every location, to give the suffixes when reshaping 
     group_by(location) %>%
     mutate(station_count = row_number()) %>%
@@ -143,40 +102,67 @@ location_info <- location_info %>%
     pivot_wider(names_from = station_count, values_from = c(NAME, NEAR_DIST, LINES), names_sep = "")
 
 
+
+
+
+# now we need to clean the crime data to get monthly crime counts, then merge with the location info we just processed
+load("Crime and night tubes EXTRA DATA/individual_crime_data.RData")
+
+# first get the monthly crime count in each location
+monthly_counts <- crime_data %>%
+    group_by(Month, Longitude, Latitude) %>%
+    summarise(num_crimes = n()) %>%
+    ungroup()
+
+# now clean it up some more
+monthly_counts <- monthly_counts %>%
+    
+    # first concatenate the longitude and latitude to make it just one variable
+    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
+    select(-c(Latitude, Longitude)) %>%
+
+    # now for every combination of location and month that isn't in the data, add a row with num_crimes = 0
+    complete(Month, location, fill = list(num_crimes = 0))
+
+
 # now merge the monthly counts with the location info, on the location variable
-temp <- merge(monthly_counts, location_info, by = "location", all.x = TRUE) %>%
+final_data <- merge(monthly_counts, location_info, by = "location", all.x = TRUE) %>%
+
+    # arrange the data to make it look nicer
     arrange(location, Month) %>%
-
-    # now concatenate all lines together, to then sort through to determine treatment
-    mutate(all_lines = apply(select(., starts_with("LINES")), 1, function(x) paste(na.omit(x), collapse = ", "))) %>%
-
-    # now make a variable for whether within 500m of a station
-    mutate(near_station = as.numeric(!is.na(NAME1))) %>%
-
-    # now make one for whether within 500m of a station on each of the night tube lines (Central, Jubilee, Northern, Piccadilly, Victoria)
-    mutate(near_station_central = as.numeric(str_detect(all_lines, "Central"))) %>%
-    mutate(near_station_jubilee = as.numeric(str_detect(all_lines, "Jubilee"))) %>%
-    mutate(near_station_northern = as.numeric(str_detect(all_lines, "Northern"))) %>%
-    mutate(near_station_piccadilly = as.numeric(str_detect(all_lines, "Piccadilly"))) %>%
-    mutate(near_station_victoria = as.numeric(str_detect(all_lines, "Victoria"))) %>%
-
+    
     # now adjust months from 2015-01 to 1, and increase in units of 1, and call this the period
     mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015)) %>%
 
-    # now create a treatment variable for any observation that is within 500m of a station with an active night tube
-    mutate(treatment = as.numeric((near_station_central == 1 & period >= 20) |
-                                  (near_station_jubilee == 1 & period >= 22) |
-                                  (near_station_northern == 1 & period >= 23) |
-                                  (near_station_piccadilly == 1 & period >= 24) |
-                                  (near_station_victoria == 1 & period >= 20)))
-    # note that the first treatment months of each station are:
-    # Central: 19 Aug 2016 (first treatment month = 12 + 8 = 20)
-    # Victoria: 19 Aug 2016 (ftm = 20)
-    # Jubilee: 7 Oct 2016 (ftm = 22)
-    # Northern: 18 Nov 2016 (ftm = 23)
-    # Piccadilly: 16 Dec 2016 (ftm = 24)
+    # get the location, the month, the period and the number of crimes as the first four columns
+    relocate(location, Month, period, num_crimes) %>%
+
+    # save the data
+    save(file = "Crime and night tubes EXTRA DATA/final_data_new.RData")
+
+# this is our final dataset with all the info we need - it has:
+# - crime count in each location with recorded crimes 
+# - names and lines served by stations within 2km of each points
+# - distance from each of the points to each of the stations within 2km of it
+
+# from this we can define treatment, as we need to, and then run the appropriate regressions
+# this is the key decision
 
 
 
-# export the data
-save(final_data, file = "Crime and night tubes EXTRA DATA/final_data.RData")
+# we can also do the same with the types of crime specified as well, in exactly the same way but also grouping crimes on the type as well as the location and month
+
+monthly_counts_crime_specific <- crime_data %>%
+    group_by(Month, Longitude, Latitude, Crime.type) %>%
+    summarise(num_crimes = n()) %>%
+    ungroup() %>%
+    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
+    select(-c(Latitude, Longitude)) %>%
+    complete(Month, location, fill = list(num_crimes = 0))
+
+
+final_data_crime_specific <- merge(monthly_counts_crime_specific, location_info, by = "location", all.x = TRUE) %>%
+    arrange(location, Month) %>%
+    mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015)) %>%
+    relocate(location, Month, period, Crime.type, num_crimes) %>%
+    save(file = "Crime and night tubes EXTRA DATA/final_data_crime_specific_new.RData")
