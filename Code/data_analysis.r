@@ -132,3 +132,56 @@ simple_did <- feols(num_crimes ~ treatment | location + Month, data = final_data
 summary(simple_did)
 
 # crimes increase!
+
+
+##############################################################################
+
+# now do it dynamically, in the standard TWFE way
+
+final_data <- final_data %>%
+    
+    # first get a variable giving the period of first treatment
+    mutate(first_treatment = 1000) %>%
+    mutate(first_treatment = ifelse(!is.na(min_piccadilly_dist), 24, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_northern_dist), 23, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_jubilee_dist), 22, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_victoria_dist), 20, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_central_dist), 20, first_treatment)) %>%
+
+    # now get the event-times
+    mutate(event_time = case_when(
+        first_treatment < 1000 ~ period - first_treatment,
+        first_treatment == 1000 ~ -1
+    ))
+
+# now do the regression
+TWFE <- feols(num_crimes ~ i(event_time, ref = -1) | location + Month, data = final_data)
+
+
+# plot the coefficients in ggplot
+event_time_coefs <- coef(TWFE)[grep("event_time::", names(coef(TWFE)))]
+event_time_se <- se(TWFE)[grep("event_time::", names(se(TWFE)))]
+event_time_df <- data.frame(
+    event_time = as.numeric(gsub("event_time::", "", names(event_time_coefs))),
+    coef = event_time_coefs,
+    se = event_time_se
+)
+# Add event_time = -1 with coef = 0 and se = 0
+event_time_df <- rbind(event_time_df, data.frame(event_time = -1, coef = 0, se = 0))
+event_time_df <- event_time_df[order(event_time_df$event_time), ]
+
+# plot the graph
+ggplot(event_time_df, aes(x = event_time, y = coef)) +
+    geom_line() +
+    geom_point() +
+    geom_ribbon(aes(ymin = coef - 1.96 * se, ymax = coef + 1.96 * se), 
+                alpha = 0.1, fill = "blue", color = scales::alpha("blue", 0.3)) +
+    geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+    geom_vline(xintercept = -0.5, linetype = "dashed", color = "black") +
+    scale_x_continuous(breaks = seq(-20, 15, 5)) +
+    labs(title = "Event Study",
+         x = "Event Time (Months Since Treatment)",
+         y = "Coefficient on Event Time") +
+    theme_minimal()
+
+# no evidence for PT
