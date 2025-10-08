@@ -12,7 +12,7 @@ load("Crime and night tubes EXTRA DATA/final_data_new.RData")
 # to do this, first create a reshaped dataset with an ID for later merging
 
 final_data <- final_data %>%
-  mutate(location_id = row_number())  # Create ID to rejoin later
+  mutate(location_id = row_number())  # create an ID to rejoin later
 
 min_dist_determination <- final_data %>%
   select(location_id, starts_with("LINES"), starts_with("NEAR_DIST")) %>%
@@ -185,3 +185,18 @@ ggplot(event_time_df, aes(x = event_time, y = coef)) +
     theme_minimal()
 
 # no evidence for PT
+
+
+
+####################################################################
+
+# do a TWFE regression with inverse proximity weighting as our treatment
+
+
+
+
+####################################################################
+
+# notes:
+
+# checking <- final_data[which(!is.na(final_data$NAME30)), ] is good to check things worked
