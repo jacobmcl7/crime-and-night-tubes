@@ -104,27 +104,30 @@ save(final_data, file = "Crime and night tubes EXTRA DATA/final_data__for_analys
 # import relevant packages
 library(fixest)
 
+# load data
+load("Crime and night tubes EXTRA DATA/final_data__for_analysis.RData")
 
-# keep only the observations within 2km of a tube station
+
+# define treatment: for now, call a region treated if it is within a set distance of an active night tube station
+
+dist = 0.25
+
 final_data <- final_data %>%
-    filter(!is.na(min_any_dist))
-
-
-# define treatment: for now, call a region treated if it is within 2km of an active night tube station
-final_data <- final_data %>%
-     mutate(treatment = ifelse((!is.na(min_central_dist) & period >= 20) |
-                                  (!is.na(min_jubilee_dist) == 1 & period >= 22) |
-                                  (!is.na(min_northern_dist) == 1 & period >= 23) |
-                                  (!is.na(min_piccadilly_dist) == 1 & period >= 24) |
-                                  (!is.na(min_victoria_dist) == 1 & period >= 20), 
-                                  1,
-                                  0))
-    # note that the first treatment months of each station are:
-    # Central: 19 Aug 2016 (first treatment month = 12 + 8 = 20)
-    # Victoria: 19 Aug 2016 (ftm = 20)
-    # Jubilee: 7 Oct 2016 (ftm = 22)
-    # Northern: 18 Nov 2016 (ftm = 23)
-    # Piccadilly: 16 Dec 2016 (ftm = 24)
+  mutate(treatment = ifelse(
+    (!is.na(min_central_dist) & min_central_dist < dist & period >= 20) |
+    (!is.na(min_jubilee_dist) & min_jubilee_dist < dist & period >= 22) |
+    (!is.na(min_northern_dist) & min_northern_dist < dist & period >= 23) |
+    (!is.na(min_piccadilly_dist) & min_piccadilly_dist < dist & period >= 24) |
+    (!is.na(min_victoria_dist) & min_victoria_dist < dist & period >= 20),
+    1,
+    0
+  ))
+# note that the first treatment months of each station are:
+# Central: 19 Aug 2016 (first treatment month = 12 + 8 = 20)
+# Victoria: 19 Aug 2016 (ftm = 20)
+# Jubilee: 7 Oct 2016 (ftm = 22)
+# Northern: 18 Nov 2016 (ftm = 23)
+# Piccadilly: 16 Dec 2016 (ftm = 24)
 
 
 # do a basic regression
@@ -136,17 +139,17 @@ summary(simple_did)
 
 ##############################################################################
 
-# now do it dynamically, in the standard TWFE way
+# now do it dynamically, in the standard TWFE way for now
 
 final_data <- final_data %>%
     
     # first get a variable giving the period of first treatment
     mutate(first_treatment = 1000) %>%
-    mutate(first_treatment = ifelse(!is.na(min_piccadilly_dist), 24, first_treatment)) %>%
-    mutate(first_treatment = ifelse(!is.na(min_northern_dist), 23, first_treatment)) %>%
-    mutate(first_treatment = ifelse(!is.na(min_jubilee_dist), 22, first_treatment)) %>%
-    mutate(first_treatment = ifelse(!is.na(min_victoria_dist), 20, first_treatment)) %>%
-    mutate(first_treatment = ifelse(!is.na(min_central_dist), 20, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_piccadilly_dist) & min_piccadilly_dist < dist, 24, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_northern_dist) & min_northern_dist < dist, 23, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_jubilee_dist) & min_jubilee_dist < dist, 22, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_victoria_dist) & min_victoria_dist < dist, 20, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_central_dist) & min_central_dist < dist, 20, first_treatment)) %>%
 
     # now get the event-times
     mutate(event_time = case_when(
@@ -194,9 +197,25 @@ ggplot(event_time_df, aes(x = event_time, y = coef)) +
 
 
 
-
 ####################################################################
 
 # notes:
 
 # checking <- final_data[which(!is.na(final_data$NAME30)), ] is good to check things worked
+
+# maybe should be using log crime count? as the distribution is heavily right skewed:
+# to see this, plot num_crimes and log(1 + num_crimes)
+ggplot(final_data, aes(x = num_crimes)) + geom_histogram(binwidth = 1) + xlim(-1, 50)
+ggplot(final_data, aes(x = log(1 + num_crimes))) + geom_histogram(binwidth = 0.1) + xlim(-1, 5)
+
+
+# we also want to interact the dummies with distance from the station, to determine the effect over distance - do this
+
+# get controls in:
+# - region fixed effects
+# - region x time (can't do unit x time as this would be collinear with treatment)
+# - properties of the station/region (interacted with time)
+
+# we also want to disaggregate by crime type - do this!
+
+# we want to do the proper event study regression using new literature
