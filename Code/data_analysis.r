@@ -5,6 +5,7 @@ library(fixest)
 library(ggplot2)
 library(tidyverse)
 library(patchwork)
+library(didimputation)
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
@@ -228,6 +229,17 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km.png", width = 8, height = 
 
 ####################################################################
 
+
+# include region x time fixed effects and any other controls
+
+
+
+
+
+
+
+####################################################################
+
 # disaggregate the results by distance: interact each of the event time dummies with a distance variable
 
 final_data <- final_data %>%
@@ -316,12 +328,38 @@ iplot(sunab_1km)
 
 
 
+
+
+####################################################################
+
+# now use Borusyak et al imputation-based estimator
+
+# make the appropriate edits to the first_treated variable for this to work
+
+final_data <- final_data %>%
+  mutate(first_treatment = ifelse(first_treatment > 100, NA, first_treatment))
+
+
+# surely do the first step of this with ML methods?
+
+did_imputation(data = final_data,
+            yname = "log_num_crimes",
+            gname = "first_treatment",
+            first_stage = ~ 0 | location + period,
+            tname = "period", 
+            idname = "location", 
+            pretrends = TRUE)
+
+# "Error: std::bad_alloc"
+# I don't think we have the memory for this
+
+
+
 #####################################################################
 
 # do it with controls
 
 # we want:
-# - region x time (can't do unit x time as this would be collinear with treatment)
 # - properties of the station/region (interacted with time)
 
 
