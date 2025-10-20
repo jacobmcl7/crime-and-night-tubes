@@ -15,6 +15,12 @@
 tube_stations = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes\Data\Underground_Stations\Underground_Stations.shp"
 tube_stations = arcpy.management.MakeFeatureLayer(tube_stations, "tube_stations")
 
+
+# insert the ward shapefile
+wards = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\Wards shapefile\WD_MAY_2024_UK_BSC.shp"
+wards = arcpy.management.MakeFeatureLayer(wards, "wards")
+
+
 # loop over the location excel files
 
 indices = ['1', '2', '3']
@@ -44,6 +50,17 @@ for index in indices:
         exclude_invalid_records="INCLUDE_INVALID"
     )
 
+    # record the ward containing each location
+    arcpy.analysis.SpatialJoin(
+        target_features="geolocated_data",
+        join_features="wards",
+        out_feature_class=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\crime_locations_ward",
+        join_operation="JOIN_ONE_TO_ONE",
+        join_type="KEEP_ALL",
+        field_mapping='Longitude "Longitude" true true false 8 Double 0 0,First,#,geolocated_data,Longitude,-1,-1;Latitude "Latitude" true true false 8 Double 0 0,First,#,geolocated_data,Latitude,-1,-1;DDMLat "DDMLat" true true false 255 Text 0 0,First,#,geolocated_data,DDMLat,0,254;DDMLon "DDMLon" true true false 255 Text 0 0,First,#,geolocated_data,DDMLon,0,254;ORIG_OID "ORIG_OID" true true false 4 Long 0 0,First,#,geolocated_data,ORIG_OID,-1,-1;WD24CD "WD24CD" true true false 9 Text 0 0,First,#,wards,WD24CD,0,8;WD24NM "WD24NM" true true false 53 Text 0 0,First,#,wards,WD24NM,0,52',
+        match_option="INTERSECT"
+    )
+
     # make a near table, of all stations within 2km
     arcpy.analysis.GenerateNearTable(
         in_features="geolocated_data",
@@ -58,11 +75,11 @@ for index in indices:
         distance_unit="Kilometers"
     )
 
-    # merge in the crime data, for each crime-station combo in the near table
+    # merge in the location data, for each location-station combo in the near table
     arcpy.management.JoinField(
         in_data="near_table",
         in_field="IN_FID",
-        join_table="crime_locations",
+        join_table="crime_locations_ward",
         join_field="OBJECTID",
         fields=None,
         fm_option="NOT_USE_FM",
@@ -70,7 +87,7 @@ for index in indices:
         index_join_fields="NO_INDEXES"
     )
 
-    # merge in the station data, for each crime-station combo in the near table
+    # merge in the station data, for each location-station combo in the near table
     arcpy.management.JoinField(
         in_data="near_table",
         in_field="NEAR_FID",
@@ -82,10 +99,10 @@ for index in indices:
         index_join_fields="NO_INDEXES"
     )
 
-    # remove all fields other than the location, the station name, and the distance to that station
+    # remove all fields other than the location, its ward details, the station name, and the distance to that station
     arcpy.management.DeleteField(
         in_table="near_table",
-        drop_field="IN_FID;NEAR_FID;NEAR_RANK;OBJECTID_1;ATCOCODE;MODES;ACCESSIBIL;NIGHT_TUBE;NETWORK;DATASET_LA;FULL_NAME",
+        drop_field="IN_FID;NEAR_FID;NEAR_RANK;DDMLat;DDMLon;Join_Count;TARGET_FID;ORIG_OID;OBJECTID_1;ATCOCODE;MODES;ACCESSIBIL;NIGHT_TUBE;NETWORK;DATASET_LA;FULL_NAME",
         method="DELETE_FIELDS"
     )
 

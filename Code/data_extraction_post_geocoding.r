@@ -1,5 +1,10 @@
 # now clean the location data we have just generated, and merge it into a suitably processed version of the crime data from before
 
+library(readxl)
+library(writexl)
+library(tidyverse)
+
+setwd("~/Economics/Papers (WIP)")
 
 #######################################################################################
 
