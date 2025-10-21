@@ -50,7 +50,9 @@ for index in indices:
         exclude_invalid_records="INCLUDE_INVALID"
     )
 
-    # record the ward containing each location
+    #### TASK 1: record the ward they lie in
+
+    # spatial join to get ward details for each location
     arcpy.analysis.SpatialJoin(
         target_features="geolocated_data",
         join_features="wards",
@@ -60,6 +62,24 @@ for index in indices:
         field_mapping='Longitude "Longitude" true true false 8 Double 0 0,First,#,geolocated_data,Longitude,-1,-1;Latitude "Latitude" true true false 8 Double 0 0,First,#,geolocated_data,Latitude,-1,-1;DDMLat "DDMLat" true true false 255 Text 0 0,First,#,geolocated_data,DDMLat,0,254;DDMLon "DDMLon" true true false 255 Text 0 0,First,#,geolocated_data,DDMLon,0,254;ORIG_OID "ORIG_OID" true true false 4 Long 0 0,First,#,geolocated_data,ORIG_OID,-1,-1;WD24CD "WD24CD" true true false 9 Text 0 0,First,#,wards,WD24CD,0,8;WD24NM "WD24NM" true true false 53 Text 0 0,First,#,wards,WD24NM,0,52',
         match_option="INTERSECT"
     )
+
+    # delete irrelevant fields
+    arcpy.management.DeleteField(
+        in_table="crime_locations_ward",
+        drop_field="Join_Count;TARGET_FID;DDMLat;DDMLon;ORIG_OID",
+        method="DELETE_FIELDS"
+    )
+
+    # export as an excel file
+    arcpy.conversion.TableToExcel(
+        Input_Table='crime_locations_ward',
+        Output_Excel_File=fr"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\ward_info_{index}.xlsx",
+        Use_field_alias_as_column_header="NAME",
+        Use_domain_and_subtype_description="CODE"
+    )
+
+
+    #### TASK 2: record all stations within 2km of each location
 
     # make a near table, of all stations within 2km
     arcpy.analysis.GenerateNearTable(
@@ -79,7 +99,7 @@ for index in indices:
     arcpy.management.JoinField(
         in_data="near_table",
         in_field="IN_FID",
-        join_table="crime_locations_ward",
+        join_table="crime_locations",
         join_field="OBJECTID",
         fields=None,
         fm_option="NOT_USE_FM",
@@ -99,7 +119,7 @@ for index in indices:
         index_join_fields="NO_INDEXES"
     )
 
-    # remove all fields other than the location, its ward details, the station name, and the distance to that station
+    # remove all fields other than the location, the station name, and the distance to that station
     arcpy.management.DeleteField(
         in_table="near_table",
         drop_field="IN_FID;NEAR_FID;NEAR_RANK;DDMLat;DDMLon;Join_Count;TARGET_FID;ORIG_OID;OBJECTID_1;ATCOCODE;MODES;ACCESSIBIL;NIGHT_TUBE;NETWORK;DATASET_LA;FULL_NAME",
