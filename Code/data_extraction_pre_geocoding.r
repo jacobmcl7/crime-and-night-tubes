@@ -29,6 +29,20 @@ for (j in 2016:2017) {
     }  
 }
 
+# now merge in the rest of the departments
+departments_remaining <- c("hertfordshire", "kent", "surrey", "essex", "thames-valley")
+
+for (dept in departments_remaining) {
+    for (j in 2015:2017) {
+        for (i in 1:12) {
+            # get the correct month format
+            month <- ifelse(i < 10, paste0("0", i), i)
+            temp_data <- read.csv(paste0("Crime and night tubes/Data/", j, "-", month, "/", j, "-", month, "-", dept, "-street.csv"), stringsAsFactors = FALSE)
+            crime_data <- rbind(crime_data, temp_data)
+        }  
+    }
+}
+
 
 # now do some processing
 crime_data <- as.data.frame(crime_data) %>%
@@ -47,12 +61,10 @@ geocoding_data <- crime_data %>%
     select(c(Longitude, Latitude)) %>%
     distinct()
 
-# there are 63294 distinct locations of crime - these will be geocoded and related to tube station locations in the gis_processing file
+# there are 161837 distinct locations of crime - these will be geocoded and related to tube station locations in the gis_processing file
 
-# split into three different files, so that ArcGIS can calculate distances to further away tube stations without crashing
-
-# export this as an excel file, for the geocoding
-# in fact, export as three different excel files, so that ArcGIS can calculate distances to further away tube stations without crashing
+# export the geocoding data as an excel file, for the geocoding
+# in fact, split into three different files, so that ArcGIS can calculate distances to further away tube stations without crashing
 write_xlsx(geocoding_data[1:floor(nrow(geocoding_data) / 3), ], "Crime and night tubes EXTRA DATA/london_crime_locations_1.xlsx")
 write_xlsx(geocoding_data[(floor(nrow(geocoding_data) / 3) + 1):(floor(2 * nrow(geocoding_data) / 3)), ], "Crime and night tubes EXTRA DATA/london_crime_locations_2.xlsx")
 write_xlsx(geocoding_data[(floor(2 * nrow(geocoding_data) / 3) + 1):nrow(geocoding_data), ], "Crime and night tubes EXTRA DATA/london_crime_locations_3.xlsx")

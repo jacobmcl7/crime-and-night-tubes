@@ -3,16 +3,16 @@
 # CAREFUL WITH THIS!!
 
 # Define the main folder path
-main_folder <- "C:/Users/jpmcl/OneDrive/Documents/Economics/Papers (WIP)/Crime and night tubes EXTRA DATA/2017-12"  # Update this path
+main_folder <- "C:/Users/jpmcl/OneDrive/Documents/Economics/Papers (WIP)/Crime and night tubes EXTRA DATA/2017-12"
 
 # Define the patterns to keep
 keep_patterns <- c(
-  "hertfordshire-outcomes",
-  "kent-outcomes",
-  "surrey-outcomes",
-  "essex-outcomes",
-  "thames-valley-outcomes",
-  "metropolitan-outcomes"
+  "hertfordshire-street",
+  "kent-street",
+  "surrey-street",
+  "essex-street",
+  "thames-valley-street",
+  "metropolitan-street"
 )
 
 # Get all subfolders matching the YYYY-MM pattern
