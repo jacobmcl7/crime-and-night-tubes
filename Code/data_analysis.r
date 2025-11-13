@@ -6,6 +6,7 @@ library(ggplot2)
 library(tidyverse)
 library(patchwork)
 library(didimputation)
+library(np) # for kernel regression
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
@@ -325,6 +326,46 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_theft.png", width =
 
 
 
+####################################################################
+
+# non-parametric approach to distance decay: use kernel regression
+
+# first collect the residuals from a basic regression on fixed effects, without event time dummies
+TWFE_1km_theft <- feols(log_theft_from_person ~ 0 | location + Month, data = final_data)
+final_data <- final_data %>%
+  mutate(residuals = resid(TWFE_1km_theft))
+
+# now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
+
+# first, for the first six months
+
+# subset the data to the relevant event times
+data_subset <- final_data %>%
+  filter(event_time >= 0 & event_time < 6)
+
+# calculate the bandwidth
+bw <- npregbw(residuals ~ min_active_dist, data = data_subset)
+
+# run the kernel regression with the given bandwidth
+kr <- npreg(bw)
+
+# get the fitted values over a grid of distances
+distance_grid <- seq(0, 2, by = 0.1)
+fitted_values <- predict(kr, newdata = data.frame(min_active_dist = distance_grid))
+
+# plot the results
+plot_df <- data.frame(distance = distance_grid, fitted = fitted_values)
+ggplot(plot_df, aes(x = distance, y = fitted)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Kernel Regression of Residuals on Distance to Closest Active Night Tube Station",
+       x = "Distance to Closest Active Night Tube Station (km)",
+       y = "Fitted Residuals") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/Kernel_Regression_0_6_months.png", width = 8, height = 6)
+
 
 ####################################################################
 
@@ -333,7 +374,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_theft.png", width =
 # same as before, but we use the sunab command in fixest
 # note that our cohort variable is first_treatment, and the large value of this variable for never treated units is what the command wants
 
-sunab_1km <- feols(log_num_crimes ~ sunab(first_treatment, period) | location + Month, data = final_data)
+sunab_1km <- feols(log_theft_from_person ~ sunab(first_treatment, period) | location + Month, data = final_data)
 
 # plot, using feols plotting function
 iplot(sunab_1km)
