@@ -7,6 +7,7 @@ library(tidyverse)
 library(patchwork)
 library(didimputation)
 # library(np) # for kernel regression
+library(mgcv) # for kernel regression
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
@@ -136,6 +137,10 @@ final_data <- final_data %>%
       (first_treatment == 24) ~ min_piccadilly_dist,
       TRUE ~ NA_real_
   )) %>%
+
+  # create another TEMPORARY version that ignores how we've defined treatment, and therefore extends to 2km
+  mutate(min_treated_dist = pmin(min_central_dist, min_victoria_dist, min_jubilee_dist, min_northern_dist, min_piccadilly_dist, na.rm = TRUE)) %>%
+  # this might actually be better for our purposes - it is invariant to current treatment status
 
   # now create a set of dummies for distance bands from 0 up to 1 in intervals of 0.25 (this will need changing when the distances change)
   mutate(dist_band_0_025 = !is.na(min_active_dist) & min_active_dist < 0.25) %>%
@@ -276,7 +281,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, h
 
 # try to do these with A+S
 
-# sunab_1km_disagg <- feols(log_num_crimes ~ sunab(first_treatment, period) | location + Month, data = final_data)
+# sunab_1km_disagg <- feols(log_num_crimes ~ sunab(first_treatment, period) : i(dist_band) | location + Month, data = final_data)
 
 # work out how to do this!
 
@@ -386,7 +391,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_shoplifting.png", width = 
 # now disaggregated by distance
 
 # do the regression
-TWFE_1km_disagg_shoplifting <- feols(log_shoplifting ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data)
+TWFE_1km_disagg_shoplifting <- feols(log_shoplifting ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # now prepare the coefficients for plotting
 coefs_0_025 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0_025")
@@ -509,43 +514,113 @@ final_data <- final_data %>%
 
 # now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
 
-# first, for the first six months
-
-# subset the data to the relevant event times
+# plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
 data_subset <- final_data %>%
-  filter(event_time >= 0 & event_time < 6)
+  filter(event_time >= 0)
 
-# first do a basic local polynomial regression
-ggplot(data_subset, aes(x = min_active_dist, y = residuals)) +
-  geom_smooth(method = "loess", span = 0.5, se = FALSE) +
-  labs(title = "Loess Regression of Residuals on Distance to Closest Active Night Tube Station",
-       x = "Distance to Closest Active Night Tube Station (km)",
-       y = "Residuals") +
-  theme_minimal()
-
-# calculate the bandwidth
-bw <- npregbw(residuals ~ min_active_dist, data = data_subset)
-
-# run the kernel regression with the given bandwidth
-kr <- npreg(bw)
-
-# get the fitted values over a grid of distances
-distance_grid <- seq(0, 2, by = 0.1)
-fitted_values <- predict(kr, newdata = data.frame(min_active_dist = distance_grid))
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = data_subset$min_active_dist,
+                                 y = data_subset$residuals,
+                                 bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
 
 # plot the results
-plot_df <- data.frame(distance = distance_grid, fitted = fitted_values)
-ggplot(plot_df, aes(x = distance, y = fitted)) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Kernel Regression of Residuals on Distance to Closest Active Night Tube Station",
-       x = "Distance to Closest Active Night Tube Station (km)",
-       y = "Fitted Residuals") +
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (All Post-Treatment)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
   theme_minimal()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Results/Kernel_Regression_0_6_months.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_all.png", width = 8, height = 6)
 
+
+
+
+# now loop over six month periods from 0-5 to 12-17, doing a kernel regression for each and saving the predictions
+for (t in seq(0, 15, by = 6)) {
+  
+  # subset the data to the relevant event times
+  data_subset <- final_data %>%
+    filter(event_time >= t & event_time < (t + 6))
+  
+  # do the kernel regression and save the results
+  assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
+                                       y = data_subset$residuals,
+                                       bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                       degree = 1,  # i.e. local linear
+                                       gridsize = 100))
+   )
+}
+
+# now plot the results, all on the same axes, with a colour gradient according to event time
+ggplot() +
+  geom_line(data = model_kerns_0, aes(x = x, y = y, color = "0-5 months"), size = 1) +
+  geom_line(data = model_kerns_6, aes(x = x, y = y, color = "6-11 months"), size = 1) +
+  geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-17 months"), size = 1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Treatment Effect Decay with Distance",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect",
+       color = "Event Time") +
+  scale_color_manual(values = c("0-5 months" = "#3e18fa", "6-11 months" = "#29bdf3", "12-17 months" = "#00ffee")) +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_6_months.png", width = 8, height = 6)
+
+
+
+
+
+# now do the same thing but in three month periods
+for (t in seq(0, 15, by = 3)) {
+  
+  # subset the data to the relevant event times
+  data_subset <- final_data %>%
+    filter(event_time >= t & event_time < (t + 3))
+  
+  # do the kernel regression and save the results
+  assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
+                                                           y = data_subset$residuals,
+                                                           bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                                           degree = 1,  # i.e. local linear
+                                                           gridsize = 100))
+  )
+}
+
+# now plot the results, all on the same axes, with a colour gradient according to event time
+ggplot() +
+  geom_line(data = model_kerns_0, aes(x = x, y = y, color = "0-2 months"), size = 1) +
+  geom_line(data = model_kerns_3, aes(x = x, y = y, color = "3-5 months"), size = 1) +
+  geom_line(data = model_kerns_6, aes(x = x, y = y, color = "6-8 months"), size = 1) +
+  geom_line(data = model_kerns_9, aes(x = x, y = y, color = "9-11 months"), size = 1) +
+  geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-14 months"), size = 1) +
+  geom_line(data = model_kerns_15, aes(x = x, y = y, color = "15-17 months"), size = 1) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Treatment Effect Decay with Distance",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect",
+       color = "Event Time") +
+  scale_color_manual(
+    values = c(
+      "0-2 months"   = "#3e18fa",
+      "3-5 months"   = "#29bdf3",
+      "6-8 months"   = "#00ffee",
+      "9-11 months"  = "#00ff99",
+      "12-14 months" = "#66ff33",
+      "15-17 months" = "#ccff00"
+    ),
+    breaks = c("0-2 months", "3-5 months", "6-8 months", "9-11 months", "12-14 months", "15-17 months")
+    # if you want the legend reversed (15 -> 0) add: , guide = guide_legend(reverse = TRUE)
+  ) +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", width = 8, height = 6)
 
 
 
