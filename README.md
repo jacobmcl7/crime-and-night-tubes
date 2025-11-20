@@ -10,4 +10,12 @@ The Code folder contains the following:
 - data_analysis.R - this begins the analysis
 
 ---
-I have not included the intermediate data here, because at points it was quite large. Please contact me at jacobmcloughlin5@gmail.com if you want it.
+
+The Data folder contains the input data, as downloaded, with the redundant files removed. I have not included the intermediate data here, because at points it was quite large. Please contact me at jacobmcloughlin5@gmail.com if you want it.
+
+--- 
+
+The repo also includes:
+- a document on the sources of my input data, data_sources.docx
+- an outline of what I've done so far, brief_outline.pdf
+- my to-do list
