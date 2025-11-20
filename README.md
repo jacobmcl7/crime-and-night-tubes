@@ -15,6 +15,12 @@ The Data folder contains the input data, as downloaded, with the redundant files
 
 --- 
 
+The Output folder contains two subfolders:
+- Figures, which contains graphs etc from exploratory analysis
+- Results, which contains various plots of event study coefficients
+
+---
+
 The repo also includes:
 - a document on the sources of my input data, data_sources.docx
 - an outline of what I've done so far, brief_outline.pdf
