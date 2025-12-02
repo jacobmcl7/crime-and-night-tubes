@@ -174,8 +174,64 @@ final_data <- final_data %>%
 # repeat the above processing of the treatment variable for the house data
 ############################################################
 
+# baseline treatment variable
+house_data <- house_data %>%
+  mutate(treatment = ifelse(
+    (!is.na(min_central_dist) & min_central_dist < dist & period >= 20) |
+    (!is.na(min_jubilee_dist) & min_jubilee_dist < dist & period >= 22) |
+    (!is.na(min_northern_dist) & min_northern_dist < dist & period >= 23) |
+    (!is.na(min_piccadilly_dist) & min_piccadilly_dist < dist & period >= 24) |
+    (!is.na(min_victoria_dist) & min_victoria_dist < dist & period >= 20),
+    1,
+    0
+  ))
 
 
+# now event time variables
+house_data <- house_data %>%
+    
+    # first get a variable giving the period of first treatment
+    mutate(first_treatment = 1000) %>%
+    mutate(first_treatment = ifelse(!is.na(min_piccadilly_dist) & min_piccadilly_dist < dist, 24, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_northern_dist) & min_northern_dist < dist, 23, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_jubilee_dist) & min_jubilee_dist < dist, 22, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_victoria_dist) & min_victoria_dist < dist, 20, first_treatment)) %>%
+    mutate(first_treatment = ifelse(!is.na(min_central_dist) & min_central_dist < dist, 20, first_treatment)) %>%
+
+    # now get the event-times
+    mutate(event_time = case_when(
+        first_treatment < 1000 ~ period - first_treatment,
+        first_treatment == 1000 ~ -1
+    ))
+
+
+# now distance bands and their interactions with event time
+house_data <- house_data %>%
+
+  # first create a variable giving distace to closest active night tube station
+  mutate(min_active_dist = case_when(
+      (first_treatment == 20) ~ pmin(min_central_dist, min_victoria_dist, na.rm = TRUE),
+      (first_treatment == 22) ~ min_jubilee_dist,
+      (first_treatment == 23) ~ min_northern_dist,
+      (first_treatment == 24) ~ min_piccadilly_dist,
+      TRUE ~ NA_real_
+  )) %>%
+
+  # now create a set of dummies for distance bands from 0 up to 1 in intervals of 0.25 (this will need changing when the distances change)
+  mutate(dist_band_0_025 = !is.na(min_active_dist) & min_active_dist < 0.25) %>%
+  mutate(dist_band_025_05 = !is.na(min_active_dist) & min_active_dist >= 0.25 & min_active_dist < 0.5) %>%
+  mutate(dist_band_05_075 = !is.na(min_active_dist) & min_active_dist >= 0.5 & min_active_dist < 0.75) %>%
+  mutate(dist_band_075_1 = !is.na(min_active_dist) & min_active_dist >= 0.75 & min_active_dist < 1) %>%
+
+  # now interact these with the event-time dummies
+  mutate(event_time_dist_0_025 = ifelse(dist_band_0_025, event_time, -1)) %>%
+  mutate(event_time_dist_025_05 = ifelse(dist_band_025_05, event_time, -1)) %>%
+  mutate(event_time_dist_05_075 = ifelse(dist_band_05_075, event_time, -1)) %>%
+  mutate(event_time_dist_075_1 = ifelse(dist_band_075_1, event_time, -1))
+
+# filter only for locations within 2km of a station (NOTE - I think it already satisfies this. Check the post-geocoding processing)
+house_data <- house_data %>%
+  filter(min_any_dist < 2)
 
 
 
@@ -204,6 +260,25 @@ plot(coefs = coefs,
 
 # save it
 ggsave("Crime and night tubes/Output/Results/TWFE_1km.png", width = 8, height = 6)
+
+
+
+####################################################################
+
+# same for house prices
+
+TWFE_1km_house <- feols(log_price ~ i(event_time, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_house, substring = "event_time")
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.15,
+    ymax = 0.15,
+    title = "Dynamic TWFE results - House Prices", 
+    note = "Simple treatment definition, theshold = 1km")
 
 
 
@@ -282,6 +357,53 @@ p1 + p2 + p3 + p4 +
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, height = 8)
+
+
+#####################################################################
+
+# now with house prices
+
+TWFE_1km_disagg_house <- feols(log_price ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
+
+
+# now prepare the coefficients for plotting
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0_025")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_025_05")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_05_075")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_075_1")
+
+# plot them, in a 2x2 grid
+# first create the plots
+p1 <- plot(coefs = coefs_0_025, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.3,
+           ymax = 0.3,
+           title = "0 to 0.25km")
+p2 <- plot(coefs = coefs_025_05, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.3,
+           ymax = 0.3,
+           title = "0.25 to 0.5km")
+p3 <- plot(coefs = coefs_05_075,
+            xsequence = seq(-20, 15, 5),
+            ymin = -0.3,
+            ymax = 0.3,
+            title = "0.5 to 0.75km")
+p4 <- plot(coefs = coefs_075_1,
+            xsequence = seq(-20, 15, 5),
+            ymin = -0.3,
+            ymax = 0.3,
+            title = "0.75 to 1km")
+
+# now combine them into a grid
+p1 + p2 + p3 + p4 +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+  title = 'TWFE results, disaggregated by distance',
+  caption = 'Basic treatment definition, threshold = 1km')
+
+
+
 
 
 #####################################################################
