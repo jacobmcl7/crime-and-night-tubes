@@ -7,3 +7,4 @@ next things to do:
     - while doing this, maybe undo the splitting of files for the geocoding - we don't need to do this
  - sort out BJS estimation
  - get in house prices and start that analysis
+ - look at DC+DH (2024) paper - might be useful in this context
