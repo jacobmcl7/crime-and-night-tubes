@@ -13,6 +13,7 @@ setwd("~/Economics/Papers (WIP)")
 
 # load in the data
 load("Crime and night tubes EXTRA DATA/final_data_new.RData")
+load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
 
 
 ########################################################
@@ -166,6 +167,13 @@ final_data <- final_data %>%
 # filter only for locations within 2km of a station
 final_data <- final_data %>%
   filter(min_any_dist < 2)
+
+
+
+############################################################
+# repeat the above processing of the treatment variable for the house data
+############################################################
+
 
 
 

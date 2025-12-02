@@ -52,5 +52,13 @@ house_data <- distinct_sales %>%
     # merge in the station data
     left_join(station_data, by = "IN_FID")
 
+
+
+# now do the following:
+# - get a month variable, for comparability with crime data
+# - get the lines of each of the stations processed as in the original processing script
+
+
+
 # save the cleaned dataset
 save(house_data, file = "Crime and night tubes EXTRA DATA/house_data_cleaned.RData")

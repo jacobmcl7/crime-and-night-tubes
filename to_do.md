@@ -6,5 +6,6 @@ next things to do:
  - get in the appropriate covariates - e.g. region and station properties
     - while doing this, maybe undo the splitting of files for the geocoding - we don't need to do this
  - sort out BJS estimation
- - get in house prices and start that analysis
+ - organise the data cleaning much better! merge the parallel cleaning processes together, for example
+ - organise the data analysis much better! maybe define treatment in the cleaning, for example, and make the functions nicer
  - look at DC+DH (2024) paper - might be useful in this context
