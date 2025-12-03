@@ -239,8 +239,114 @@ house_data <- house_data %>%
 # now do some analysis
 ############################################################
 
+# first plot means over time for treated and untreated areas, by the 'first treatment' variable
+mean_data <- final_data %>%
+  group_by(period, first_treatment) %>%
+  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
 
-# first do a simple dynamic TWFE regression
+# edit the data so all have the same average mean in periods 1 to 19, by subtracting the difference
+baseline_means <- mean_data %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment) %>%
+  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data <- mean_data %>%
+  left_join(baseline_means, by = "first_treatment") %>%
+  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment), group = as.factor(first_treatment))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log number of crimes over time by first treatment period",
+       x = "Month",
+       y = "Mean log number of crimes",
+       color = "First Treatment Period") +
+  theme_minimal()
+
+
+# now do it after grouping into three month bins
+mean_data_binned <- final_data %>%
+  mutate(period_bin = case_when(
+    period %in% c(1, 2, 3) ~ 1,
+    period %in% c(4, 5, 6) ~ 4,
+    period %in% c(7, 8, 9) ~ 7,
+    period %in% c(10, 11, 12) ~ 10,
+    period %in% c(13, 14, 15) ~ 13,
+    period %in% c(16, 17, 18) ~ 16,
+    period %in% c(19, 20, 21) ~ 19,
+    period %in% c(22, 23, 24) ~ 22,
+    period %in% c(25, 26, 27) ~ 25,
+    period %in% c(28, 29, 30) ~ 28,
+    period %in% c(31, 32, 33) ~ 31,
+    period %in% c(34, 35, 36) ~ 34
+  )) %>%
+  group_by(period_bin, first_treatment) %>%
+  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period_bin 1 and 18, by subtracting the difference
+baseline_means_binned <- mean_data_binned %>%
+  filter(period_bin >= 1 & period_bin <= 18) %>%
+  group_by(first_treatment) %>%
+  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_binned <- mean_data_binned %>%
+  left_join(baseline_means_binned, by = "first_treatment") %>%
+  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_binned, aes(x = period_bin, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment), group = as.factor(first_treatment))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log number of crimes over time (binned) by first treatment period",
+       x = "Month (binned)",
+       y = "Mean log number of crimes",
+       color = "First Treatment Period") +
+  theme_minimal()
+
+
+############################################################
+
+# now do the same for thefts
+mean_data_theft <- final_data %>%
+  group_by(period, first_treatment) %>%
+  summarise(mean_log_theft_from_person = mean(log_theft_from_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means_theft <- mean_data_theft %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment) %>%
+  summarise(baseline_mean = mean(mean_log_theft_from_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_theft <- mean_data_theft %>%
+  left_join(baseline_means_theft, by = "first_treatment") %>%
+  mutate(adjusted_mean_log_theft_from_person = mean_log_theft_from_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person, color = as.factor(first_treatment), group = as.factor(first_treatment))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log theft from the person over time by first treatment period",
+       x = "Month",
+       y = "Mean log theft from the person",
+       color = "First Treatment Period") +
+  theme_minimal()
+
+
+
+
+############################################################
+
+# now do a simple dynamic TWFE regression
 
 # now do the regression, saving it to then be plotted
 TWFE_1km <- feols(log_num_crimes ~ i(event_time, ref = -1) | location + Month, data = final_data, cluster = "location")
