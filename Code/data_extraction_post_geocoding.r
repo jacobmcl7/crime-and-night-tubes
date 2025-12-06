@@ -41,40 +41,83 @@ ls_pairs <- ls_pairs %>%
     mutate(location = paste0(Latitude, ", ", Longitude)) %>%
     select(-c(Longitude, Latitude))
 
-# now reshape it to give one observation per location, with all the relevant station info in it
-# if an location has multiple observations with different names, near_dist and lines, make new variables name2, near_dist2 and lines2 that hold these new values
-location_info <- ls_pairs %>%
-    # number each observation for every location, to give the suffixes when reshaping 
-    group_by(location) %>%
-    # give each location-station pair a number from 1 to the number of stations for that location
-    mutate(station_count = row_number()) %>%
-    ungroup() %>%
-    # now do the reshaping, using these values
-    pivot_wider(names_from = station_count, values_from = c(NAME, NEAR_DIST, LINES), names_sep = "")
 
+# now extract the relevant station information about each location
+# do this as follows: get the minimum distance of each location from a tube station on each of the lines of interest, if they are within 2km
+# we will do this for the 5 treated lines, and then for any line at all
 
+# first get the min distance for each location from a stop on the central line
+min_dist_central <- ls_pairs %>%
+  # filter only rows where LINES contains "Central"
+  filter(grepl("Central", LINES, fixed = TRUE)) %>%
+  # now for each location, get the minimum distance and the corresponding station
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_central_dist = NEAR_DIST,
+         central_station = NAME) %>%
+  select(location, min_central_dist, central_station)
 
-# we now want to prepare the ward information for each location as well
+# this data will be combined with the remainder of the lines later on
 
-# first load in the ward info we generated in the geocoding script
-ward_info <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/ward_info_1.xlsx"))
-for (i in 2:3) {
-    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/ward_info_", i, ".xlsx")))
-    ward_info <- rbind(ward_info, temp)
-}
+# now do the same for all other treated lines: first Jubilee
+min_dist_jubilee <- ls_pairs %>%
+  filter(grepl("Jubilee", LINES, fixed = TRUE)) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_jubilee_dist = NEAR_DIST,
+         jubilee_station = NAME) %>%
+  select(location, min_jubilee_dist, jubilee_station)
 
-# combine latitude and longitude, and drop the id column, as before
-ward_info <- ward_info %>%
-    # drop the id column inserted by ArcGIS
-    select(-c(OBJECTID)) %>%
+# now Piccadilly
+min_dist_piccadilly <- ls_pairs %>%
+  filter(grepl("Piccadilly", LINES, fixed = TRUE)) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_piccadilly_dist = NEAR_DIST,
+         piccadilly_station = NAME) %>%
+  select(location, min_piccadilly_dist, piccadilly_station)
 
-    # join longitude and latitude into one location variable, as before
-    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
-    select(-c(Longitude, Latitude))
+# now Victoria
+min_dist_victoria <- ls_pairs %>%
+  filter(grepl("Victoria", LINES, fixed = TRUE)) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_victoria_dist = NEAR_DIST,
+         victoria_station = NAME) %>%
+  select(location, min_victoria_dist, victoria_station)
 
-# this data will be merged in later
+# now Northern
+min_dist_northern <- ls_pairs %>%
+  filter(grepl("Northern", LINES, fixed = TRUE)) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_northern_dist = NEAR_DIST,
+         northern_station = NAME) %>%
+  select(location, min_northern_dist, northern_station)
 
+# now do it for any station at all
+min_dist_any <- ls_pairs %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  # we will also keep the line on which the closest station lies
+  rename(min_any_dist = NEAR_DIST,
+         closest_station = NAME,
+         closest_line = LINES) %>%
+  select(location, min_any_dist, closest_station, closest_line)
 
+# now merge all of these minimum distance datasets together
+location_info <- min_dist_any %>%
+  left_join(min_dist_central, by = "location") %>%
+  left_join(min_dist_jubilee, by = "location") %>%
+  left_join(min_dist_piccadilly, by = "location") %>%
+  left_join(min_dist_victoria, by = "location") %>%
+  left_join(min_dist_northern, by = "location")
 
 
 ###############################################################
@@ -86,16 +129,15 @@ ward_info <- ward_info %>%
 # first load it in
 load("Crime and night tubes EXTRA DATA/individual_crime_data.RData")
 
-# first get the monthly crime count in each location
+# do some cleaning
 monthly_counts <- crime_data %>%
+
+    # first get the monthly crime count in each location
     group_by(Month, Longitude, Latitude) %>%
     summarise(num_crimes = n()) %>%
-    ungroup()
-
-# now clean it up some more
-monthly_counts <- monthly_counts %>%
+    ungroup() %>%
     
-    # first concatenate the longitude and latitude to make it just one variable
+    # now concatenate the longitude and latitude to make it just one variable
     mutate(location = paste0(Latitude, ", ", Longitude)) %>%
     select(-c(Latitude, Longitude)) %>%
 
@@ -136,9 +178,6 @@ monthly_counts_type <- crime_data %>%
 # first merge the monthly counts with the location info, on the location variable
 final_data <- merge(monthly_counts, location_info, by = "location", all.x = TRUE)
 
-# also merge in the ward info from above too, in the same way
-final_data <- merge(final_data, ward_info, by = "location", all.x = TRUE)
-
 # now merge in the counts of each crime type as well - now on both location and month
 final_data <- merge(final_data, monthly_counts_type, by = c("location", "Month"), all.x = TRUE)
 
@@ -150,104 +189,32 @@ final_data <- final_data %>%
     
     # now adjust months from 2015-01 to 1, and increase in units of 1, and call this the period
     mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015)) %>%
-
-    # get the location, the month, the period, the number of crimes, and the ward info, as the first columns
-    relocate(location, Month, period, num_crimes, WD24CD, WD24NM, Burglary, `Shoplifting`, `Theft from the person`) %>%
-
+    
     # replace NAs in the crime type counts with 0s
     mutate(Burglary = ifelse(is.na(Burglary), 0, Burglary),
            `Shoplifting` = ifelse(is.na(`Shoplifting`), 0, `Shoplifting`),
            `Theft from the person` = ifelse(is.na(`Theft from the person`), 0, `Theft from the person`)) %>%
 
-    # include a log of crime count + 1, as the count data is heavily rightward skewed but has zeros (as done in e.g. Christensen et al (2024))
-    mutate(log_num_crimes = log(1 + num_crimes))
+    # include a log of crime count + 1, for all crime counts, as the count data is heavily rightward skewed but has zeros (as done in e.g. Christensen et al (2024))
+    mutate(log_num_crimes = log(1 + num_crimes)) %>%
+    mutate(log_theft_from_person = log(1 + `Theft from the person`)) %>%
+    mutate(log_shoplifting = log(1 + Shoplifting)) %>%
+    mutate(log_burglary = log(1 + Burglary)) %>%
+    # note: may need to do this another way (e.g. logit/poisson) as there are a lot of 0 and 1 (harder to justify log(1 + x) here?)
+
+    # get the location, the month, the period, and the number of crimes as the first columns
+    relocate(location, Month, period, num_crimes, log_num_crimes, Burglary, log_burglary, `Shoplifting`, log_shoplifting, `Theft from the person`, log_theft_from_person)
 
 
 
-# now get the minimum distance of each station from a tube station on each of the lines of interest, if they are within 2km
-# we will do this for the 5 treated lines, and then for any line at all
+##############################################################
 
-# first reshape the data to make it easier to work with: get observations corresponding to each location-station pair
-min_dist_determination <- final_data %>%
-  filter(Month == "2015-01") %>%  # just need one month's observations
-  select(location, starts_with("LINES"), starts_with("NEAR_DIST")) %>%
-  pivot_longer(
-    cols = -location,
-    names_to = c(".value", "n"),
-    names_pattern = "(LINES|NEAR_DIST)(\\d+)"
-  )
-
-
-# now get the min distance for the central line
-min_dist_central <- min_dist_determination %>%
-  # filter only rows where LINES is not NA and contains "Central"
-  filter(!is.na(LINES), grepl("Central", LINES, fixed = TRUE)) %>%
-  # now get the minimum distance for each location
-  group_by(location) %>%
-  summarise(min_central_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-# this now gives the minimum distance to a central line station for each location within 2km of a central line station
-
-# merge back into the data
-final_data <- final_data %>%
-  left_join(min_dist_central, by = "location")
-
-# the locations that aren't within 2km of a central line station will have NA in this variable - no problem
-
-
-# do the same for all other treated lines: first Jubilee
-min_dist_jubilee <- min_dist_determination %>%
-  filter(!is.na(LINES), grepl("Jubilee", LINES, fixed = TRUE)) %>%
-  group_by(location) %>%
-  summarise(min_jubilee_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-final_data <- final_data %>%
-  left_join(min_dist_jubilee, by = "location")
-
-# now Piccadilly
-min_dist_piccadilly <- min_dist_determination %>%
-  filter(!is.na(LINES), grepl("Piccadilly", LINES, fixed = TRUE)) %>%
-  group_by(location) %>%
-  summarise(min_piccadilly_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-final_data <- final_data %>%
-  left_join(min_dist_piccadilly, by = "location")
-
-# now Victoria
-min_dist_victoria <- min_dist_determination %>%
-  filter(!is.na(LINES), grepl("Victoria", LINES, fixed = TRUE)) %>%
-  group_by(location) %>%
-  summarise(min_victoria_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-final_data <- final_data %>%
-  left_join(min_dist_victoria, by = "location")
-
-# now Northern
-min_dist_northern <- min_dist_determination %>%
-  filter(!is.na(LINES), grepl("Northern", LINES, fixed = TRUE)) %>%
-  group_by(location) %>%
-  summarise(min_northern_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-final_data <- final_data %>%
-  left_join(min_dist_northern, by = "location")
-
-# now get the min distance to any station
-min_dist_any <- min_dist_determination %>%
-  filter(!is.na(LINES)) %>% # may not need to filter
-  group_by(location) %>%
-  summarise(min_any_dist = min(NEAR_DIST, na.rm = TRUE), .groups = "drop")
-
-final_data <- final_data %>%
-  left_join(min_dist_any, by = "location")
-
-
-# save the data
-save(final_data, file = "Crime and night tubes EXTRA DATA/final_data_new.RData")
+# the cleaning is done - now save the final dataset
+save(final_data, file = "Crime and night tubes EXTRA DATA/final_data.RData")
 
 # this is our final dataset with all the info we need - it has:
 # - crime count in each location with recorded crimes 
-# - names and lines served by stations within 2km of each points
-# - distance from each of the points to each of the stations within 2km of it
+# - names and lines served by stations within 2km of each points, appropriately processed for analysis
 
 # from this we can define treatment, as we need to, and then run the appropriate regressions
 # this is the key decision, which will be made (and varied) in the next R script
