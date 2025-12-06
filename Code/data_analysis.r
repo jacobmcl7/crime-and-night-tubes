@@ -145,6 +145,7 @@ define_distance_bands <- function(thresholds, distance, data) {
       (!!sym(first_treatment_col) == 24) ~ min_piccadilly_dist,
       TRUE ~ Inf
     ))
+    # min_active_dist is dependent on treatment!! Either add a _dist, or make it independent of treatment
 
   # now loop over the thresholds to create distance band dummies and their interactions with event time
   for (i in 1:(length(thresholds) - 1)) {
@@ -203,6 +204,8 @@ house_data <- house_data %>%
 ############################################################
 
 # first plot means over time for treated and untreated areas, by the 'first treatment' variable
+
+# calculate monthly means of log number of crimes, by first treatment period
 mean_data <- final_data %>%
   group_by(period, first_treatment_1) %>%
   summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
@@ -312,12 +315,11 @@ ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person,
 # now do a simple dynamic TWFE regression
 
 # now do the regression, saving it to then be plotted
-TWFE_1km <- feols(log_num_crimes ~ i(event_time, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km <- feols(log_num_crimes ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km, substring = "event_time")
-
+coefs <- plot_prepare(TWFE_1km, substring = "event_time_1")
 
 # plot the graph
 plot(coefs = coefs, 
@@ -336,10 +338,10 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km.png", width = 8, height = 
 
 # same for house prices
 
-TWFE_1km_house <- feols(log_price ~ i(event_time, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
+TWFE_1km_house <- feols(log_price ~ i(event_time_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_house, substring = "event_time")
+coefs <- plot_prepare(TWFE_1km_house, substring = "event_time_1")
 
 # plot the graph
 plot(coefs = coefs, 
@@ -357,9 +359,9 @@ plot(coefs = coefs,
 # now use Abraham and Sun (2021) method
 
 # same as before, but we use the sunab command in fixest
-# note that our cohort variable is first_treatment, and the large value of this variable for never treated units is what the command wants
+# note that our cohort variable is first_treatment_1, and the large value of this variable for never treated units is what the command wants
 
-sunab_1km <- feols(log_num_crimes ~ sunab(first_treatment, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km <- feols(log_num_crimes ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km, omitted_pd = -1)
@@ -385,14 +387,14 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km.png", width = 8, height =
 # disaggregate the results by distance: interact each of the event time dummies with a distance variable
 
 # now these can be used in a regression
-TWFE_1km_disagg <- feols(log_num_crimes ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_disagg <- feols(log_num_crimes ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_0_025")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_025_05")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_05_075")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_075_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots
@@ -432,14 +434,14 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, h
 
 # now with house prices
 
-TWFE_1km_disagg_house <- feols(log_price ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
+TWFE_1km_disagg_house <- feols(log_price ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
 
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0_025")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_025_05")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_05_075")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_075_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots
@@ -491,12 +493,11 @@ p1 + p2 + p3 + p4 +
 # first for theft from the person
 
 # now do the regression, saving it to then be plotted
-TWFE_1km_theft <- feols(log_theft_from_person ~ i(event_time, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_theft <- feols(log_theft_from_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_theft, substring = "event_time")
-
+coefs <- plot_prepare(TWFE_1km_theft, substring = "event_time_1")
 
 # plot the graph
 plot(coefs = coefs, 
@@ -515,7 +516,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft.png", width = 8, hei
 # now with A+S
 
 # same as before, but we use the sunab command in fixest
-sunab_1km_theft <- feols(log_theft_from_person ~ sunab(first_treatment, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km_theft <- feols(log_theft_from_person ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km_theft, omitted_pd = -1)
 # plot the graph
@@ -534,14 +535,14 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_theft.png", width = 8, he
 # now do it with varying distance thresholds, again as before
 
 # run the regression
-TWFE_1km_disagg_theft <- feols(log_theft_from_person ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_disagg_theft <- feols(log_theft_from_person ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0_025")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_025_05")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_05_075")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_075_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots
@@ -584,10 +585,10 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_theft.png", width =
 # now with a new crime: shoplifting
 
 # first all together
-TWFE_1km_shoplifting <- feols(log_shoplifting ~ i(event_time, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_shoplifting <- feols(log_shoplifting ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_shoplifting, substring = "event_time")
+coefs <- plot_prepare(TWFE_1km_shoplifting, substring = "event_time_1")
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
@@ -605,7 +606,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_shoplifting.png", width = 
 # now with A+S
 
 # same as before, but we use the sunab command in fixest
-sunab_1km_shoplifting <- feols(log_shoplifting ~ sunab(first_treatment, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km_shoplifting <- feols(log_shoplifting ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km_shoplifting, omitted_pd = -1)
 # plot the graph
@@ -624,13 +625,13 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_shoplifting.png", width =
 # now disaggregated by distance
 
 # do the regression
-TWFE_1km_disagg_shoplifting <- feols(log_shoplifting ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_disagg_shoplifting <- feols(log_shoplifting ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0_025")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_025_05")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_05_075")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_075_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots
@@ -672,10 +673,10 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_shoplifting.png", w
 # now for burglary
 
 # first all together
-TWFE_1km_burglary <- feols(log_burglary ~ i(event_time, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_burglary <- feols(log_burglary ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_burglary, substring = "event_time")
+coefs <- plot_prepare(TWFE_1km_burglary, substring = "event_time_1")
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
@@ -695,7 +696,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_burglary.png", width = 8, 
 
 # same as before, but we use the sunab command in fixest
 
-sunab_1km_burglary <- feols(log_burglary ~ sunab(first_treatment, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km_burglary <- feols(log_burglary ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km_burglary, omitted_pd = -1)
@@ -717,13 +718,13 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_burglary.png", width = 8,
 # now disaggregated by distance
 
 # do the regression
-TWFE_1km_disagg_burglary <- feols(log_burglary ~ i(event_time_dist_0_025, ref = -1) + i(event_time_dist_025_05, ref = -1) + i(event_time_dist_05_075, ref = -1) + i(event_time_dist_075_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_disagg_burglary <- feols(log_burglary ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0_025")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_025_05")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_05_075")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_075_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots 
