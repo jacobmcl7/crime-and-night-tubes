@@ -824,7 +824,11 @@ ggplot() +
        x = "Distance from Station (km)",
        y = "Treatment Effect",
        color = "Event Time") +
-  scale_color_manual(values = c("0-5 months" = "#3e18fa", "6-11 months" = "#29bdf3", "12-17 months" = "#00ffee")) +
+  scale_color_manual(values = c(
+        "0-5 months" = "#3e18fa",
+        "6-11 months" = "#29bdf3",
+        "12-17 months" = "#00ffee"), 
+        breaks = c("0-5 months", "6-11 months", "12-17 months")) +
   theme_minimal()
 
 # save the graph
@@ -872,9 +876,7 @@ ggplot() +
       "12-14 months" = "#66ff33",
       "15-17 months" = "#ccff00"
     ),
-    breaks = c("0-2 months", "3-5 months", "6-8 months", "9-11 months", "12-14 months", "15-17 months")
-    # if you want the legend reversed (15 -> 0) add: , guide = guide_legend(reverse = TRUE)
-  ) +
+    breaks = c("0-2 months", "3-5 months", "6-8 months", "9-11 months", "12-14 months", "15-17 months")) +
   theme_minimal()
 
 # save the graph
@@ -889,7 +891,13 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", widt
 # make the appropriate edits to the first_treated variable for this to work
 
 final_data <- final_data %>%
-  mutate(first_treatment = ifelse(first_treatment > 100, NA, first_treatment))
+  mutate(first_treatment_1 = ifelse(first_treatment_1 > 100, NA, first_treatment_1))
+
+
+# filter the data to include only observations from a random subset of locations
+set.seed(123)
+final_data_subset <- final_data %>%
+  filter(location %in% sample(unique(location), 5000))
 
 # we need the following variables:
 # outcome (yname)
@@ -897,29 +905,39 @@ final_data <- final_data %>%
 # calendar period (tname)
 # unit identifier (idname)
 
-TWFE_BJS <- did_imputation(data = final_data,
-            yname = "log_num_crimes",
-            gname = "first_treatment",
+# time how long this takes
+start_time <- Sys.time()
+TWFE_BJS <- did_imputation(data = final_data_subset,
+            yname = "log_theft_from_person",
+            gname = "first_treatment_1",
             # first_stage = ~ 0 | location + period,    (omit this - automatically just does FEs)
             tname = "period", 
             idname = "location",
             horizon = TRUE,
-            pretrends = -3:-1)
+            pretrends = -20:-1)
+end_time <- Sys.time()
+end_time - start_time
 
+# including all pretrends gives huge standard errors - why is this?
+# we also get std::bad_alloc error when going up to 10000 locations
 
-# take a random sample of soze 1000 from the data to try this out on - full data is too large
-set.seed(123)  # for reproducibility
-final_data_sample <- final_data %>% sample_n(100000)
+# plot the results
+TWFE_BJS <- as.data.frame(TWFE_BJS) %>%
+  mutate(term = as.numeric(term))
+
+ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
+  geom_line() +
+  geom_point() +
+  geom_ribbon(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), 
+              alpha = 0.1, fill = "blue", color = scales::alpha("blue", 0.3)) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  geom_vline(xintercept = -0.5, linetype = "dashed", color = "black") +
+  labs(title = "Borusyak, Jaravel, and Spiess (2021) Imputation Estimator Results",
+       x = "Event Time (Months Since Treatment)",
+       y = "Coefficient on Event Time") +
+  theme_minimal()
 
 # surely do the first step of this with ML methods?
-
-did_imputation(data = final_data_sample,
-            yname = "log_num_crimes",
-            gname = "first_treatment",
-            first_stage = ~ 0 | location + period,
-            tname = "period", 
-            idname = "location", 
-            pretrends = TRUE)
 
 # "Error: std::bad_alloc"
 # I don't think we have the memory for this
