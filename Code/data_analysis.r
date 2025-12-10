@@ -763,6 +763,74 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_burglary.png", widt
 
 ####################################################################
 
+# now do it with all crimes, in a loop
+
+crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
+ "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
+ "possession_of_weapons", "bicycle_theft", "drugs", "public_order",                
+"theft_from_the_person", "robbery")
+
+for (crime in crime_types) {
+  
+  # create the formula
+  formula <- as.formula(paste0("`log_", crime, "` ~ i(event_time_1, ref = -1) | location + Month"))
+  
+  # run the regression
+  model <- feols(formula, data = final_data, cluster = "location")
+  
+  # prepare the coefficients for plotting
+  coefs <- plot_prepare(model, substring = "event_time_1")
+  
+  # plot the graph
+  plot(coefs = coefs, 
+      xsequence = seq(-20, 15, 5), 
+      ymin = -0.05,
+      ymax = 0.05,
+      title = paste0("Dynamic TWFE results - ", gsub("_", " ", crime)), 
+      note = "Simple treatment definition, theshold = 1km")
+  
+  # save it
+  ggsave(paste0("Crime and night tubes/Output/Results/loop_TWFE_1km_", crime, ".png"), width = 8, height = 6)
+
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+  
+}
+
+####################################################################
+
+# now do it with A+S, in a loop
+
+for (crime in crime_types) {
+  
+  # create the formula
+  formula <- as.formula(paste0("`log_", crime, "` ~ sunab(first_treatment_1, period) | location + Month"))
+  
+  # run the regression
+  model <- feols(formula, data = final_data, cluster = "location")
+  
+  # prepare the coefficients for plotting
+  coefs <- plot_prepare2(model, omitted_pd = -1)
+  
+  # plot the graph
+  plot(coefs = coefs, 
+      xsequence = seq(-20, 15, 5), 
+      ymin = -0.05,
+      ymax = 0.05,
+      title = paste0("Dynamic Sun and Abraham (2021) results - ", gsub("_", " ", crime)), 
+      note = "Simple treatment definition, theshold = 1km")
+  
+  # save it
+  ggsave(paste0("Crime and night tubes/Output/Results/loop_Sunab_1km_", crime, ".png"), width = 8, height = 6)
+
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+
+}
+
+
+####################################################################
+
 # non-parametric approach to distance decay: use kernel regression
 
 # first collect the residuals from a basic regression on fixed effects, without event time dummies

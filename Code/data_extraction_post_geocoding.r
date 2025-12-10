@@ -151,8 +151,8 @@ monthly_counts <- crime_data %>%
 # make a new dataset giving crime counts in each location-month for each of a specific subset of crimes
 monthly_counts_type <- crime_data %>%
 
-    # choose the crimes of interest
-    filter(Crime.type %in% c("Theft from the person", "Burglary", "Shoplifting")) %>%
+    # # choose the crimes of interest
+    # filter(Crime.type %in% c("Theft from the person", "Burglary", "Shoplifting", "Robbery")) %>%
 
     # clean as before
     group_by(Month, Longitude, Latitude, Crime.type) %>%
@@ -162,10 +162,11 @@ monthly_counts_type <- crime_data %>%
     # reshape wide to get variables for each crime type
     pivot_wider(names_from = Crime.type, values_from = num_crimes, values_fill = list(num_crimes = 0)) %>%
     mutate(location = paste0(Latitude, ", ", Longitude)) %>%
-    select(-c(Latitude, Longitude))
+    select(-c(Latitude, Longitude)) %>%
 
-
-
+    # make the crime column names lower case and underscores instead of spaces
+    rename_with(~ gsub(" ", "_", .x), -c(Month, location)) %>%
+    rename_with(tolower, -c(Month, location))
 
 
 
@@ -188,22 +189,28 @@ final_data <- final_data %>%
     arrange(location, Month) %>%
     
     # now adjust months from 2015-01 to 1, and increase in units of 1, and call this the period
-    mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015)) %>%
-    
-    # replace NAs in the crime type counts with 0s
-    mutate(Burglary = ifelse(is.na(Burglary), 0, Burglary),
-           `Shoplifting` = ifelse(is.na(`Shoplifting`), 0, `Shoplifting`),
-           `Theft from the person` = ifelse(is.na(`Theft from the person`), 0, `Theft from the person`)) %>%
+    mutate(period = as.numeric(substr(Month, 6, 7)) + 12 * (as.numeric(substr(Month, 1, 4)) - 2015))
 
-    # include a log of crime count + 1, for all crime counts, as the count data is heavily rightward skewed but has zeros (as done in e.g. Christensen et al (2024))
+# now deal with the crime counts - first make a vector of each crime type, to make this easier
+crime_types <- colnames(monthly_counts_type)[!(colnames(monthly_counts_type) %in% c("Month", "location"))]
+    
+# now replace NAs in the crime type counts with 0s
+final_data <- final_data %>%
+
+    # for each crime type, replace NAs with 0s
+    mutate(across(all_of(crime_types), ~ ifelse(is.na(.), 0, .))) %>%
+
+    # now include a log of crime count + 1, for each crime type specifically
+    mutate(across(all_of(crime_types), ~ log(1 + .), .names = "log_{.col}")) %>%
+
+    # same for the overall crime count
     mutate(log_num_crimes = log(1 + num_crimes)) %>%
-    mutate(log_theft_from_person = log(1 + `Theft from the person`)) %>%
-    mutate(log_shoplifting = log(1 + Shoplifting)) %>%
-    mutate(log_burglary = log(1 + Burglary)) %>%
-    # note: may need to do this another way (e.g. logit/poisson) as there are a lot of 0 and 1 (harder to justify log(1 + x) here?)
+
+    # finally get the location, the month, the period, and the number of crimes as the first columns
+    relocate(location, Month, period, num_crimes, log_num_crimes, all_of(crime_types), starts_with("log_"))
 
     # get the location, the month, the period, and the number of crimes as the first columns
-    relocate(location, Month, period, num_crimes, log_num_crimes, Burglary, log_burglary, `Shoplifting`, log_shoplifting, `Theft from the person`, log_theft_from_person)
+    relocate(location, Month, period, num_crimes, log_num_crimes, Burglary, log_burglary, `Shoplifting`, log_shoplifting, `Theft from the person`, log_theft_from_person, Robbery, log_robbery)
 
 
 
