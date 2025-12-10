@@ -12,7 +12,6 @@ library(KernSmooth) # for kernel regression
 setwd("~/Economics/Papers (WIP)")
 
 # load in the data
-# load("Crime and night tubes EXTRA DATA/final_data_new.RData")
 load("Crime and night tubes EXTRA DATA/final_data.RData")
 load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
 
@@ -203,116 +202,8 @@ house_data <- house_data %>%
 # now do some analysis
 ############################################################
 
-# first plot means over time for treated and untreated areas, by the 'first treatment' variable
 
-# calculate monthly means of log number of crimes, by first treatment period
-mean_data <- final_data %>%
-  group_by(period, first_treatment_1) %>%
-  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
-  ungroup()
-
-# edit the data so all have the same average mean in periods 1 to 19, by subtracting the difference
-baseline_means <- mean_data %>%
-  filter(period >= 1 & period <= 19) %>%
-  group_by(first_treatment_1) %>%
-  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
-  ungroup()
-
-# join the baseline means back to the mean data
-mean_data <- mean_data %>%
-  left_join(baseline_means, by = "first_treatment_1") %>%
-  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
-
-# plot it as a line graph, by first treatment period
-ggplot(mean_data, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Mean log number of crimes over time by first treatment period",
-       x = "Month",
-       y = "Mean log number of crimes",
-       color = "First Treatment Period") +
-  theme_minimal()
-
-
-# now do it after grouping into three month bins
-mean_data_binned <- final_data %>%
-  mutate(period_bin = case_when(
-    period %in% c(1, 2, 3) ~ 1,
-    period %in% c(4, 5, 6) ~ 4,
-    period %in% c(7, 8, 9) ~ 7,
-    period %in% c(10, 11, 12) ~ 10,
-    period %in% c(13, 14, 15) ~ 13,
-    period %in% c(16, 17, 18) ~ 16,
-    period %in% c(19, 20, 21) ~ 19,
-    period %in% c(22, 23, 24) ~ 22,
-    period %in% c(25, 26, 27) ~ 25,
-    period %in% c(28, 29, 30) ~ 28,
-    period %in% c(31, 32, 33) ~ 31,
-    period %in% c(34, 35, 36) ~ 34
-  )) %>%
-  group_by(period_bin, first_treatment_1) %>%
-  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
-  ungroup()
-
-# edit the data so all have the same average mean between period_bin 1 and 18, by subtracting the difference
-baseline_means_binned <- mean_data_binned %>%
-  filter(period_bin >= 1 & period_bin <= 18) %>%
-  group_by(first_treatment_1) %>%
-  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
-  ungroup()
-
-# join the baseline means back to the mean data
-mean_data_binned <- mean_data_binned %>%
-  left_join(baseline_means_binned, by = "first_treatment_1") %>%
-  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
-
-# plot it as a line graph, by first treatment period
-ggplot(mean_data_binned, aes(x = period_bin, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Mean log number of crimes over time (binned) by first treatment period",
-       x = "Month (binned)",
-       y = "Mean log number of crimes",
-       color = "First Treatment Period") +
-  theme_minimal()
-
-
-############################################################
-
-# now do the same for thefts
-mean_data_theft <- final_data %>%
-  group_by(period, first_treatment_1) %>%
-  summarise(mean_log_theft_from_person = mean(log_theft_from_person, na.rm = TRUE)) %>%
-  ungroup()
-
-# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
-baseline_means_theft <- mean_data_theft %>%
-  filter(period >= 1 & period <= 19) %>%
-  group_by(first_treatment_1) %>%
-  summarise(baseline_mean = mean(mean_log_theft_from_person, na.rm = TRUE)) %>%
-  ungroup()
-
-# join the baseline means back to the mean data
-mean_data_theft <- mean_data_theft %>%
-  left_join(baseline_means_theft, by = "first_treatment_1") %>%
-  mutate(adjusted_mean_log_theft_from_person = mean_log_theft_from_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
-
-# plot it as a line graph, by first treatment period
-ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
-  geom_line() +
-  geom_point() +
-  labs(title = "Mean log theft from the person over time by first treatment period",
-       x = "Month",
-       y = "Mean log theft from the person",
-       color = "First Treatment Period") +
-  theme_minimal()
-
-
-
-
-############################################################
-
-# now do a simple dynamic TWFE regression
+# start with a simple dynamic TWFE regression
 
 # now do the regression, saving it to then be plotted
 TWFE_1km <- feols(log_num_crimes ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
@@ -763,7 +654,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_burglary.png", widt
 
 ####################################################################
 
-# now do it with all crimes, in a loop
+# now do it with all crimes, in a loop, then plotting them all together as well
 
 crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
  "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
@@ -781,13 +672,15 @@ for (crime in crime_types) {
   # prepare the coefficients for plotting
   coefs <- plot_prepare(model, substring = "event_time_1")
   
-  # plot the graph
-  plot(coefs = coefs, 
+  # save and plot the graph
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
       xsequence = seq(-20, 15, 5), 
       ymin = -0.05,
       ymax = 0.05,
-      title = paste0("Dynamic TWFE results - ", gsub("_", " ", crime)), 
-      note = "Simple treatment definition, theshold = 1km")
+      title = paste0("TWFE results - ", gsub("_", " ", crime)), 
+      note = "Simple treatment definition, theshold = 1km"))
+  # now print the plot in the loop
+  print(get(paste0("plot_", crime)))
   
   # save it
   ggsave(paste0("Crime and night tubes/Output/Results/loop_TWFE_1km_", crime, ".png"), width = 8, height = 6)
@@ -796,6 +689,17 @@ for (crime in crime_types) {
   print(paste0("Done for ", crime))
   
 }
+
+# now plot them all in one big grid
+(plot_violence_and_sexual_offences + plot_vehicle_crime + plot_other_theft + plot_burglary +
+ `plot_anti-social_behaviour` + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
+ plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
+ plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 5)
+
+# save this too
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid.png", width = 22, height = 12)
+
 
 ####################################################################
 
@@ -812,13 +716,16 @@ for (crime in crime_types) {
   # prepare the coefficients for plotting
   coefs <- plot_prepare2(model, omitted_pd = -1)
   
-  # plot the graph
-  plot(coefs = coefs, 
+  # save and plot the graph
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
       xsequence = seq(-20, 15, 5), 
       ymin = -0.05,
       ymax = 0.05,
-      title = paste0("Dynamic Sun and Abraham (2021) results - ", gsub("_", " ", crime)), 
-      note = "Simple treatment definition, theshold = 1km")
+      title = paste0("S&A (2021) results - ", gsub("_", " ", crime)), 
+      note = "Simple treatment definition, theshold = 1km"))
+
+  # now print the plot in the loop
+  print(get(paste0("plot_", crime)))
   
   # save it
   ggsave(paste0("Crime and night tubes/Output/Results/loop_Sunab_1km_", crime, ".png"), width = 8, height = 6)
@@ -827,6 +734,16 @@ for (crime in crime_types) {
   print(paste0("Done for ", crime))
 
 }
+
+# now plot them all in one big grid
+(plot_violence_and_sexual_offences + plot_vehicle_crime + plot_other_theft + plot_burglary +
+ `plot_anti-social_behaviour` + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
+ plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
+ plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 5)
+
+# save this too
+ggsave("Crime and night tubes/Output/Results/Sunab_1km_crimes_grid.png", width = 22, height = 12)
 
 
 ####################################################################
