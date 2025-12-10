@@ -831,6 +831,47 @@ for (crime in crime_types) {
 
 ####################################################################
 
+# do a Poisson regression as a robustness check, for TWFE
+
+# basic event study with two-way fixed effects, using the feglm function from the fixest package
+
+# do the regression, saving it to then be plotted
+TWFE_1km_poisson <- feglm(num_crimes ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location", family = poisson())
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_poisson, substring = "event_time_1")
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "Dynamic TWFE results", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# check this is being done right
+
+####################################################################
+
+# do it for thefts
+
+# do the regression, saving it to then be plotted
+TWFE_1km_poisson_theft <- feglm(theft_from_the_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location", family = poisson())
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_poisson_theft, substring = "event_time_1")
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "Dynamic TWFE results - Theft from the person", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# this drops loads of observations - why?
+
+
+####################################################################
+
 # non-parametric approach to distance decay: use kernel regression
 
 # first collect the residuals from a basic regression on fixed effects, without event time dummies
