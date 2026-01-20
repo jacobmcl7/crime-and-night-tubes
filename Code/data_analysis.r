@@ -7,6 +7,7 @@ library(tidyverse)
 library(patchwork)
 library(didimputation)
 library(KernSmooth) # for kernel regression
+library(etwfe)
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
@@ -14,6 +15,38 @@ setwd("~/Economics/Papers (WIP)")
 # load in the data
 load("Crime and night tubes EXTRA DATA/final_data.RData")
 load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
+
+
+# ANALYSIS OVERVIEW
+# =================
+#
+# 1. FUNCTIONS
+#    - Define helper functions:
+#      * plot_prepare() & plot_prepare2(): Extract and format regression coefficients
+#      * plot(): Create event-study graphs with confidence intervals
+#      * define_treatment_event_time(): Assign treatment status based on distance thresholds
+#      * define_distance_bands(): Create distance band dummies for heterogeneity analysis
+#
+# 2. DATA PREPARATION
+#    - Define treatment (1km threshold) and event time variables
+#    - Create distance bands (0-0.25km, 0.25-0.5km, 0.5-0.75km, 0.75-1km)
+#    - Filter to locations within 2km of any station
+#    - Apply same transformations to both crime and house price data
+#
+# 3. MAIN ANALYSES
+#    a) Basic TWFE regressions (total crimes & house prices)
+#    b) Sun & Abraham (2021) estimator (total crimes & house prices)
+#    c) Distance heterogeneity (4 distance bands in 2x2 grids)
+#    d) Crime-specific analyses (theft, shoplifting, burglary)
+#    e) Loop through all 14 crime types (TWFE & Sun-Abraham)
+#
+# 4. ROBUSTNESS CHECKS
+#    - Poisson regression models
+#    - Non-parametric kernel regression for distance decay
+#    - Borusyak et al. (2021) imputation estimator (on subset due to memory constraints)
+#
+# All results saved to: Crime and night tubes/Output/Results/
+# All figures saved to: Crime and night tubes/Output/Figures/
 
 
 ########################################################
@@ -321,52 +354,6 @@ p1 + p2 + p3 + p4 +
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, height = 8)
 
 
-#####################################################################
-
-# now with house prices
-
-TWFE_1km_disagg_house <- feols(log_price ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
-
-
-# now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0_0.25")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.25_0.5")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.5_0.75")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_house, substring = "event_time_dist_0.75_1")
-
-# plot them, in a 2x2 grid
-# first create the plots
-p1 <- plot(coefs = coefs_0_025, 
-           xsequence = seq(-20, 15, 5),
-           ymin = -0.3,
-           ymax = 0.3,
-           title = "0 to 0.25km")
-p2 <- plot(coefs = coefs_025_05, 
-           xsequence = seq(-20, 15, 5),
-           ymin = -0.3,
-           ymax = 0.3,
-           title = "0.25 to 0.5km")
-p3 <- plot(coefs = coefs_05_075,
-            xsequence = seq(-20, 15, 5),
-            ymin = -0.3,
-            ymax = 0.3,
-            title = "0.5 to 0.75km")
-p4 <- plot(coefs = coefs_075_1,
-            xsequence = seq(-20, 15, 5),
-            ymin = -0.3,
-            ymax = 0.3,
-            title = "0.75 to 1km")
-
-# now combine them into a grid
-p1 + p2 + p3 + p4 +
-  plot_layout(ncol = 2) +
-  plot_annotation(
-  title = 'TWFE results, disaggregated by distance',
-  caption = 'Basic treatment definition, threshold = 1km')
-
-
-
-
 
 #####################################################################
 
@@ -379,11 +366,11 @@ p1 + p2 + p3 + p4 +
 
 #####################################################################
 
-# do it for individual crimes
+# now do the above analysis for individual crimes
 
-# first for theft from the person
+# first for theft from the person, starting with the basic TWFE regression
 
-# now do the regression, saving it to then be plotted
+# do the regression, saving it to then be plotted
 TWFE_1km_theft <- feols(log_theft_from_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
@@ -422,12 +409,10 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_theft.png", width = 8, he
 
 ##########################################################
 
-
 # now do it with varying distance thresholds, again as before
 
 # run the regression
 TWFE_1km_disagg_theft <- feols(log_theft_from_person ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
-
 
 # now prepare the coefficients for plotting
 coefs_0_025 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0_0.25")
@@ -469,156 +454,62 @@ p1 + p2 + p3 + p4 +
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_theft.png", width = 12, height = 8)
 
 
-
-
 ####################################################################
 
-# now with a new crime: shoplifting
+# now do it for robbery
 
-# first all together
-TWFE_1km_shoplifting <- feols(log_shoplifting ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+# do the regression, saving it to then be plotted
+TWFE_1km_robbery <- feols(log_robbery ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_shoplifting, substring = "event_time_1")
+coefs <- plot_prepare(TWFE_1km_robbery, substring = "event_time_1")
+
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
     ymin = -0.05,
     ymax = 0.05,
-    title = "Dynamic TWFE results - Shoplifting", 
+    title = "Dynamic TWFE results - Robbery", 
     note = "Simple treatment definition, theshold = 1km")
 
 # save it
-ggsave("Crime and night tubes/Output/Results/TWFE_1km_shoplifting.png", width = 8, height = 6)
-
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_robbery.png", width = 8, height = 6)
 
 ####################################################################
 
 # now with A+S
 
-# same as before, but we use the sunab command in fixest
-sunab_1km_shoplifting <- feols(log_shoplifting ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km_robbery <- feols(log_robbery ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
+
 # prepare for plotting
-coefs <- plot_prepare2(sunab_1km_shoplifting, omitted_pd = -1)
+coefs <- plot_prepare2(sunab_1km_robbery, omitted_pd = -1)
+
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
     ymin = -0.05,
     ymax = 0.05,
-    title = "Dynamic Sun and Abraham (2021) results - shoplifting", 
+    title = "Dynamic Sun and Abraham (2021) results - Robbery", 
     note = "Simple treatment definition, theshold = 1km")
-# save it
-ggsave("Crime and night tubes/Output/Results/Sunab_1km_shoplifting.png", width = 8, height = 6)
 
+# save it
+ggsave("Crime and night tubes/Output/Results/Sunab_1km_robbery.png", width = 8, height = 6)
 
 ####################################################################
 
-# now disaggregated by distance
+# now do it with varied distance thresholds
 
-# do the regression
-TWFE_1km_disagg_shoplifting <- feols(log_shoplifting ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+# run the regression
+TWFE_1km_disagg_robbery <- feols(log_robbery ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0_0.25")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.25_0.5")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.5_0.75")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_shoplifting, substring = "event_time_dist_0.75_1")
+coefs_0_025 <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_dist_0_0.25")
+coefs_025_05 <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_dist_0.25_0.5")
+coefs_05_075 <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_dist_0.5_0.75")
+coefs_075_1 <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_dist_0.75_1")
 
 # plot them, in a 2x2 grid
 # first create the plots
-p1 <- plot(coefs = coefs_0_025, 
-           xsequence = seq(-20, 15, 5),
-           ymin = -0.125,
-           ymax = 0.125,
-           title = "0 to 0.25km")
-p2 <- plot(coefs = coefs_025_05, 
-           xsequence = seq(-20, 15, 5),
-            ymin = -0.125,
-            ymax = 0.125,
-            title = "0.25 to 0.5km")
-p3 <- plot(coefs = coefs_05_075,
-            xsequence = seq(-20, 15, 5),
-            ymin = -0.125,
-            ymax = 0.125,
-            title = "0.5 to 0.75km")
-p4 <- plot(coefs = coefs_075_1,
-            xsequence = seq(-20, 15, 5),
-            ymin = -0.125,
-            ymax = 0.125,
-            title = "0.75 to 1km")
-
-# now combine them into a grid
-p1 + p2 + p3 + p4 +
-  plot_layout(ncol = 2) +
-  plot_annotation(
-  title = 'TWFE results for shoplifting, disaggregated by distance',
-  caption = 'Basic treatment definition, threshold = 1km')
-
-# save the graph
-ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_shoplifting.png", width = 12, height = 8)
-
-
-
-####################################################################
-
-# now for burglary
-
-# first all together
-TWFE_1km_burglary <- feols(log_burglary ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
-
-# prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_burglary, substring = "event_time_1")
-# plot the graph
-plot(coefs = coefs, 
-    xsequence = seq(-20, 15, 5), 
-    ymin = -0.05,
-    ymax = 0.05,
-    title = "Dynamic TWFE results - Burglary", 
-    note = "Simple treatment definition, theshold = 1km")
-
-# save it
-ggsave("Crime and night tubes/Output/Results/TWFE_1km_burglary.png", width = 8, height = 6)
-
-
-
-####################################################################
-
-# now with A+S
-
-# same as before, but we use the sunab command in fixest
-
-sunab_1km_burglary <- feols(log_burglary ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
-
-# prepare for plotting
-coefs <- plot_prepare2(sunab_1km_burglary, omitted_pd = -1)
-# plot the graph
-plot(coefs = coefs, 
-    xsequence = seq(-20, 15, 5), 
-    ymin = -0.05,
-    ymax = 0.05,
-    title = "Dynamic Sun and Abraham (2021) results - burglary", 
-    note = "Simple treatment definition, theshold = 1km") 
-
-# save it
-ggsave("Crime and night tubes/Output/Results/Sunab_1km_burglary.png", width = 8, height = 6)
-
-
-
-####################################################################
-
-# now disaggregated by distance
-
-# do the regression
-TWFE_1km_disagg_burglary <- feols(log_burglary ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
-
-# now prepare the coefficients for plotting
-coefs_0_025 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0_0.25")
-coefs_025_05 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.25_0.5")
-coefs_05_075 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.5_0.75")
-coefs_075_1 <- plot_prepare(TWFE_1km_disagg_burglary, substring = "event_time_dist_0.75_1")
-
-# plot them, in a 2x2 grid
-# first create the plots 
 p1 <- plot(coefs = coefs_0_025, 
            xsequence = seq(-20, 15, 5),
            ymin = -0.125,
@@ -644,17 +535,16 @@ p4 <- plot(coefs = coefs_075_1,
 p1 + p2 + p3 + p4 +
   plot_layout(ncol = 2) +
   plot_annotation(
-  title = 'TWFE results for burglary, disaggregated by distance',
-  caption = 'Basic treatment definition, threshold = 1km') 
+  title = 'TWFE results for robbery, disaggregated by distance',
+  caption = 'Basic treatment definition, threshold = 1km')
 
 # save the graph
-ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_burglary.png", width = 12, height = 8)
-
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_robbery.png", width = 12, height = 8)
 
 
 ####################################################################
 
-# now do it with all crimes, in a loop, then plotting them all together as well
+# now do it with all crimes, in a loop, then plotting them all together
 
 crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
  "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
@@ -703,7 +593,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid.png", width = 
 
 ####################################################################
 
-# now do it with A+S, in a loop
+# do this with A+S too, again in a loop
 
 for (crime in crime_types) {
   
@@ -748,43 +638,103 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_crimes_grid.png", width =
 
 ####################################################################
 
-# do a Poisson regression as a robustness check, for TWFE
+# do a Poisson regression as a robustness check, using the etwfe package (from Wooldridge, 2023)
 
-# basic event study with two-way fixed effects, using the feglm function from the fixest package
+# we must regress on a set of saturated controls, as implicitly done here
+TWFE_1km_poisson <- etwfe(
+  fml = num_crimes ~ 1,
+  tvar = period,
+  gvar = first_treatment_1,
+  data = final_data,
+  vcov = ~location, 
+  family = "poisson",
+  cgroup = "never"
+)
 
-# do the regression, saving it to then be plotted
-TWFE_1km_poisson <- feglm(num_crimes ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location", family = poisson())
+# understand why dummies are being dropped! This happens in the etwfe guide too though, so maybe isn't a problem
 
-# prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_poisson, substring = "event_time_1")
+# prepare the coefficients for plotting, using the command from etwfe
+coefs <- as.data.frame(emfx(TWFE_1km_poisson, type = "event")) %>%
+  rename(event_time = event) %>%
+  rename(coef = estimate) %>%
+  rename(se = std.error)
+
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
-    ymin = -0.1,
-    ymax = 0.1,
-    title = "Dynamic TWFE results", 
-    note = "Simple treatment definition, theshold = 1km")
+    ymin = -0.25,
+    ymax = 0.25,
+    title = "Dynamic TWFE results - Poisson Regression", 
+    note = "Note")
 
-# check this is being done right
+# save the graph
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson.png", width = 8, height = 6)
+
 
 ####################################################################
 
-# do it for thefts
+# do it for thefts specifically
 
 # do the regression, saving it to then be plotted
-TWFE_1km_poisson_theft <- feglm(theft_from_the_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location", family = poisson())
+TWFE_1km_poisson_theft <- etwfe(
+  fml = theft_from_the_person ~ 1,
+  tvar = period,
+  gvar = first_treatment_1,
+  data = final_data,
+  vcov = ~location, 
+  family = "poisson",
+  cgroup = "never"
+)
 
-# prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_poisson_theft, substring = "event_time_1")
+# prepare the coefficients for plotting, using the command from etwfe
+coefs <- as.data.frame(emfx(TWFE_1km_poisson_theft, type = "event")) %>%
+  rename(event_time = event) %>%
+  rename(coef = estimate) %>%
+  rename(se = std.error)
+
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
-    ymin = -0.1,
-    ymax = 0.1,
-    title = "Dynamic TWFE results - Theft from the person", 
-    note = "Simple treatment definition, theshold = 1km")
+    ymin = -0.125,
+    ymax = 0.125,
+    title = "Dynamic TWFE results - Poisson Regression - Theft from the Person", 
+    note = "Note")
 
-# this drops loads of observations - why?
+# save the graph
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_theft.png", width = 8, height = 6)
+
+
+####################################################################
+
+# do it for robberies too
+
+# do the regression, saving it to then be plotted
+TWFE_1km_poisson_robbery <- etwfe(
+  fml = robbery ~ 1,
+  tvar = period,
+  gvar = first_treatment_1,
+  data = final_data,
+  vcov = ~location, 
+  family = "poisson",
+  cgroup = "never"
+)
+
+# prepare the coefficients for plotting, using the command from etwfe
+coefs <- as.data.frame(emfx(TWFE_1km_poisson_robbery, type = "event")) %>%
+  rename(event_time = event) %>%
+  rename(coef = estimate) %>%
+  rename(se = std.error)
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.125,
+    ymax = 0.125,
+    title = "Dynamic TWFE results - Poisson Regression - Robbery", 
+    note = "Note")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", width = 8, height = 6)
 
 
 ####################################################################
