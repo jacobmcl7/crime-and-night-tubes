@@ -9,3 +9,9 @@ next things to do:
  - organise the data cleaning much better! merge the parallel cleaning processes together, for example
  - organise the data analysis much better! maybe define treatment in the cleaning, for example, and make the functions nicer
  - look at DC+DH (2024) paper - might be useful in this context
+ - add in Poisson regressions from Wooldridge (2023)
+ - get SEs for the nonparametric estimation
+ - vary distance for treatment
+ - write a detailed outline structure
+ - get summary stats ready
+ - think about structural modelling for crime commute costs
