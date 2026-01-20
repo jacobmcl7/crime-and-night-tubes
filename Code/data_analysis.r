@@ -653,7 +653,7 @@ TWFE_1km_poisson <- etwfe(
 
 # understand why dummies are being dropped! This happens in the etwfe guide too though, so maybe isn't a problem
 
-# prepare the coefficients for plotting, using the command from etwfe
+# prepare the coefficients for plotting, using the emfx command from etwfe
 coefs <- as.data.frame(emfx(TWFE_1km_poisson, type = "event")) %>%
   rename(event_time = event) %>%
   rename(coef = estimate) %>%
@@ -665,7 +665,7 @@ plot(coefs = coefs,
     ymin = -0.25,
     ymax = 0.25,
     title = "Dynamic TWFE results - Poisson Regression", 
-    note = "Note")
+    note = "Simple treatment definition, theshold = 1km")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson.png", width = 8, height = 6)
@@ -698,7 +698,7 @@ plot(coefs = coefs,
     ymin = -0.125,
     ymax = 0.125,
     title = "Dynamic TWFE results - Poisson Regression - Theft from the Person", 
-    note = "Note")
+    note = "Simple treatment definition, theshold = 1km")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_theft.png", width = 8, height = 6)
@@ -728,10 +728,10 @@ coefs <- as.data.frame(emfx(TWFE_1km_poisson_robbery, type = "event")) %>%
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
-    ymin = -0.125,
-    ymax = 0.125,
+    ymin = -0.05,
+    ymax = 0.05,
     title = "Dynamic TWFE results - Poisson Regression - Robbery", 
-    note = "Note")
+    note = "Simple treatment definition, theshold = 1km")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", width = 8, height = 6)
@@ -943,21 +943,14 @@ ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
 
 # notes:
 
-# checking <- final_data[which(!is.na(final_data$NAME30)), ] is good to check things worked
-
-# maybe should be using log crime count? as the distribution is heavily right skewed:
+# should be using log crime count, as the distribution is heavily right skewed:
 # to see this, plot num_crimes and log(1 + num_crimes)
 #ggplot(final_data, aes(x = num_crimes)) + geom_histogram(binwidth = 1) + xlim(-1, 50)
 #ggplot(final_data, aes(x = log(1 + num_crimes))) + geom_histogram(binwidth = 0.1) + xlim(-1, 5)
 
-
-# we also want to interact the dummies with distance from the station, to determine the effect over distance - do this
-
 # get controls in:
 # - region x time (can't do unit x time as this would be collinear with treatment)
 # - properties of the station/region (interacted with time)
-
-# we also want to disaggregate by crime type - do this!
 
 # we want to do the proper event study regression using new literature
 
