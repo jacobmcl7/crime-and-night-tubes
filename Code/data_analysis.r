@@ -31,19 +31,18 @@ load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
 #    - Define treatment (1km threshold) and event time variables
 #    - Create distance bands (0-0.25km, 0.25-0.5km, 0.5-0.75km, 0.75-1km)
 #    - Filter to locations within 2km of any station
-#    - Apply same transformations to both crime and house price data
 #
 # 3. MAIN ANALYSES
 #    a) Basic TWFE regressions (total crimes & house prices)
 #    b) Sun & Abraham (2021) estimator (total crimes & house prices)
 #    c) Distance heterogeneity (4 distance bands in 2x2 grids)
-#    d) Crime-specific analyses (theft, shoplifting, burglary)
+#    d) Crime-specific analyses
 #    e) Loop through all 14 crime types (TWFE & Sun-Abraham)
 #
 # 4. ROBUSTNESS CHECKS
 #    - Poisson regression models
 #    - Non-parametric kernel regression for distance decay
-#    - Borusyak et al. (2021) imputation estimator (on subset due to memory constraints)
+#    - Borusyak et al. (2021) imputation estimator
 #
 # All results saved to: Crime and night tubes/Output/Results/
 # All figures saved to: Crime and night tubes/Output/Figures/
@@ -212,12 +211,14 @@ final_data <- define_treatment_event_time(distance = 1, data = final_data)
 final_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = final_data)
 # note that the distance bands are: 0-0.25km, 0.25-0.5km, 0.5-0.75km, 0.75-1km
 
+# do the same for other distances
+final_data <- define_treatment_event_time(distance = 0.5, data = final_data)
+final_data <- define_treatment_event_time(distance = 0.75, data = final_data)
+final_data <- define_treatment_event_time(distance = 1.25, data = final_data)
 
 # now do the exact same for the house price data
 house_data <- define_treatment_event_time(distance = 1, data = house_data)
 house_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = house_data)
-
-# CHECK THESE WORKED! graphs are the same, so it seems to be fine, but check the functions
 
 
 # also, filter only for locations within 2km of a station, for representativeness
@@ -256,6 +257,31 @@ plot(coefs = coefs,
 # save it
 ggsave("Crime and night tubes/Output/Results/TWFE_1km.png", width = 8, height = 6)
 
+
+
+####################################################################
+
+# now do it again for different distances
+for (dist in c(0.5, 0.75, 1.25)) {
+
+  event_time_var <- paste0("event_time_", dist)
+  
+  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) | location + Month")
+  
+  TWFE <- feols(as.formula(formula_str), data = final_data, cluster = "location")
+  
+  coefs <- plot_prepare(TWFE, substring = paste0("event_time_", dist))
+
+  p <- plot(coefs = coefs,
+      xsequence = seq(-20, 15, 5),
+      ymin = -0.1,
+      ymax = 0.1,
+      title = paste0("Dynamic TWFE results - Distance threshold: ", dist, "km"), 
+      note = paste0("Simple treatment definition, theshold = ", dist, "km"))
+
+  # save it
+  ggsave(paste0("Crime and night tubes/Output/Results/TWFE_", dist, "km.png"), plot = p, width = 8, height = 6)
+}
 
 
 ####################################################################
@@ -299,6 +325,31 @@ plot(coefs = coefs,
 
 # save it
 ggsave("Crime and night tubes/Output/Results/Sunab_1km.png", width = 8, height = 6)
+
+
+####################################################################
+
+# do it again for treatment defined at different distances
+for (dist in c(0.5, 0.75, 1.25)) {
+
+  first_treatment_var <- paste0("first_treatment_", dist)
+  
+  formula_str <- paste0("log_num_crimes ~ sunab(", first_treatment_var, ", period) | location + Month")
+  
+  sunab <- feols(as.formula(formula_str), data = final_data, cluster = "location")
+  
+  coefs <- plot_prepare2(sunab, omitted_pd = -1)
+
+  p <- plot(coefs = coefs,
+      xsequence = seq(-20, 15, 5),
+      ymin = -0.1,
+      ymax = 0.1,
+      title = paste0("Dynamic Sun and Abraham (2021) results - Distance threshold: ", dist, "km"), 
+      note = paste0("Simple treatment definition, theshold = ", dist, "km"))
+
+  # save it
+  ggsave(paste0("Crime and night tubes/Output/Results/Sunab_", dist, "km.png"), plot = p, width = 8, height = 6)
+}
 
 
 
