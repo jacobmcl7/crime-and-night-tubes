@@ -14,7 +14,7 @@ setwd("~/Economics/Papers (WIP)")
 
 # load in the data
 load("Crime and night tubes EXTRA DATA/final_data.RData")
-load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
+# load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
 
 
 # ANALYSIS OVERVIEW
@@ -130,22 +130,22 @@ define_treatment_event_time <- function(distance, data) {
     # Piccadilly: 16 Dec 2016 (ftm = 24)
     # we therefore define the current treatment status variable as follows
     mutate(!!treatment_col := ifelse(
-      (!is.na(min_central_dist) & min_central_dist < distance & period >= 20) |
-      (!is.na(min_jubilee_dist) & min_jubilee_dist < distance & period >= 22) |
-      (!is.na(min_northern_dist) & min_northern_dist < distance & period >= 23) |
-      (!is.na(min_piccadilly_dist) & min_piccadilly_dist < distance & period >= 24) |
-      (!is.na(min_victoria_dist) & min_victoria_dist < distance & period >= 20),
+      (!is.na(min_nt_central_dist) & min_nt_central_dist < distance & period >= 20) |
+      (!is.na(min_nt_jubilee_dist) & min_nt_jubilee_dist < distance & period >= 22) |
+      (!is.na(min_nt_northern_dist) & min_nt_northern_dist < distance & period >= 23) |
+      (!is.na(min_nt_piccadilly_dist) & min_nt_piccadilly_dist < distance & period >= 24) |
+      (!is.na(min_nt_victoria_dist) & min_nt_victoria_dist < distance & period >= 20),
       1,
       0
     )) %>%
 
     # create first_treatment variable, assigning it infninity to all untreated locations
     mutate(!!first_treatment_col := Inf) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_piccadilly_dist) & min_piccadilly_dist < distance, 24, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_northern_dist) & min_northern_dist < distance, 23, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_jubilee_dist) & min_jubilee_dist < distance, 22, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_victoria_dist) & min_victoria_dist < distance, 20, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_central_dist) & min_central_dist < distance, 20, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_piccadilly_dist) & min_nt_piccadilly_dist < distance, 24, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_northern_dist) & min_nt_northern_dist < distance, 23, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_jubilee_dist) & min_nt_jubilee_dist < distance, 22, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_victoria_dist) & min_nt_victoria_dist < distance, 20, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_central_dist) & min_nt_central_dist < distance, 20, !!sym(first_treatment_col))) %>%
     
 
     # finally, create a set of event time dummies
@@ -170,10 +170,10 @@ define_distance_bands <- function(thresholds, distance, data) {
 
     # first create a variable giving distace to closest active night tube station
     mutate(min_active_dist := case_when(
-      (!!sym(first_treatment_col) == 20) ~ pmin(min_central_dist, min_victoria_dist, na.rm = TRUE),
-      (!!sym(first_treatment_col) == 22) ~ min_jubilee_dist,
-      (!!sym(first_treatment_col) == 23) ~ min_northern_dist,
-      (!!sym(first_treatment_col) == 24) ~ min_piccadilly_dist,
+      (!!sym(first_treatment_col) == 20) ~ pmin(min_nt_central_dist, min_nt_victoria_dist, na.rm = TRUE),
+      (!!sym(first_treatment_col) == 22) ~ min_nt_jubilee_dist,
+      (!!sym(first_treatment_col) == 23) ~ min_nt_northern_dist,
+      (!!sym(first_treatment_col) == 24) ~ min_nt_piccadilly_dist,
       TRUE ~ Inf
     ))
     # min_active_dist is dependent on treatment!! Either add a _dist, or make it independent of treatment
@@ -217,8 +217,8 @@ final_data <- define_treatment_event_time(distance = 0.75, data = final_data)
 final_data <- define_treatment_event_time(distance = 1.25, data = final_data)
 
 # now do the exact same for the house price data
-house_data <- define_treatment_event_time(distance = 1, data = house_data)
-house_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = house_data)
+# house_data <- define_treatment_event_time(distance = 1, data = house_data)
+# house_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = house_data)
 
 
 # also, filter only for locations within 2km of a station, for representativeness
@@ -227,8 +227,8 @@ final_data <- final_data %>%
   # move to the post-geocoding script?
 
 # filter now the house data for only for locations within 2km of a station (NOTE - I think it already satisfies this. Check the post-geocoding processing)
-house_data <- house_data %>%
-  filter(min_any_dist < 2)
+# house_data <- house_data %>%
+#   filter(min_any_dist < 2)
 
 
 
@@ -288,18 +288,18 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
 # same for house prices
 
-TWFE_1km_house <- feols(log_price ~ i(event_time_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
+# TWFE_1km_house <- feols(log_price ~ i(event_time_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
 
-# prepare the coefficients for plotting
-coefs <- plot_prepare(TWFE_1km_house, substring = "event_time_1")
+# # prepare the coefficients for plotting
+# coefs <- plot_prepare(TWFE_1km_house, substring = "event_time_1")
 
-# plot the graph
-plot(coefs = coefs, 
-    xsequence = seq(-20, 15, 5), 
-    ymin = -0.15,
-    ymax = 0.15,
-    title = "Dynamic TWFE results - House Prices", 
-    note = "Simple treatment definition, theshold = 1km")
+# # plot the graph
+# plot(coefs = coefs, 
+#     xsequence = seq(-20, 15, 5), 
+#     ymin = -0.15,
+#     ymax = 0.15,
+#     title = "Dynamic TWFE results - House Prices", 
+#     note = "Simple treatment definition, theshold = 1km")
 
 
 
@@ -422,7 +422,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, h
 # first for theft from the person, starting with the basic TWFE regression
 
 # do the regression, saving it to then be plotted
-TWFE_1km_theft <- feols(log_theft_from_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_theft <- feols(log_theft_from_the_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 
 # prepare the coefficients for plotting
@@ -445,7 +445,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft.png", width = 8, hei
 # now with A+S
 
 # same as before, but we use the sunab command in fixest
-sunab_1km_theft <- feols(log_theft_from_person ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
+sunab_1km_theft <- feols(log_theft_from_the_person ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km_theft, omitted_pd = -1)
 # plot the graph
@@ -463,7 +463,7 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_theft.png", width = 8, he
 # now do it with varying distance thresholds, again as before
 
 # run the regression
-TWFE_1km_disagg_theft <- feols(log_theft_from_person ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_disagg_theft <- feols(log_theft_from_the_person ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
 
 # now prepare the coefficients for plotting
 coefs_0_025 <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_dist_0_0.25")
@@ -793,7 +793,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", widt
 # non-parametric approach to distance decay: use kernel regression
 
 # first collect the residuals from a basic regression on fixed effects, without event time dummies
-TWFE_1km_theft <- feols(log_theft_from_person ~ 0 | location + Month, data = final_data)
+TWFE_1km_theft <- feols(log_theft_from_the_person ~ 0 | location + Month, data = final_data)
 final_data <- final_data %>%
   mutate(residuals = resid(TWFE_1km_theft))
 
@@ -801,7 +801,7 @@ final_data <- final_data %>%
 
 # plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
 data_subset <- final_data %>%
-  filter(event_time >= 0)
+  filter(event_time_1 >= 0)
 
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = data_subset$min_active_dist,
@@ -830,7 +830,7 @@ for (t in seq(0, 15, by = 6)) {
   
   # subset the data to the relevant event times
   data_subset <- final_data %>%
-    filter(event_time >= t & event_time < (t + 6))
+    filter(event_time_1 >= t & event_time_1 < (t + 6))
   
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
@@ -870,7 +870,7 @@ for (t in seq(0, 15, by = 3)) {
   
   # subset the data to the relevant event times
   data_subset <- final_data %>%
-    filter(event_time >= t & event_time < (t + 3))
+    filter(event_time_1 >= t & event_time_1 < (t + 3))
   
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
