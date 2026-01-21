@@ -307,31 +307,238 @@ ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person,
 
 ############################################################
 
-# now get a summary table
+# now get a summary table for the crime stats
 
-sumtable(data = final_data, 
-        vars = c("num_crimes", "theft_from_the_person", "robbery"),
-        out = "latex",
-        file = "Crime and night tubes/Output/Figures/summary_table.tex")
+# collect up relevant variables
+crime_types <- c(
+  "num_crimes",
+  "robbery",
+  "theft_from_the_person", 
+  "violence_and_sexual_offences",
+  "public_order",
+  "burglary",
+  "bicycle_theft",
+  "shoplifting",
+  "criminal_damage_and_arson",
+  "drugs",
+  "other_theft",
+  "vehicle_crime",
+  "possession_of_weapons",
+  "other_crime",
+  "anti-social_behaviour"
+)
 
-# MAKE THIS MUCH BETTER
+# create a summary function that gets the stats we want
+calc_summary <- function(x) {
+  x <- x[!is.na(x)]
+  tibble(
+    N = length(x),
+    Mean = mean(x),
+    SD = sd(x),
+    Median = median(x),
+    P75 = quantile(x, 0.75),
+    P90 = quantile(x, 0.90),
+    P95 = quantile(x, 0.95),
+    P99 = quantile(x, 0.99),
+    Max = max(x),
+    Total_Count = sum(x),
+    Nonzero = sum(x > 0),
+    PCT_Nonzero = mean(x > 0) * 100
+  )
+}
+
+# get the summary stats
+panel <- map_dfr(crime_types, ~{
+  calc_summary(final_data[[.x]]) %>%
+    mutate(Variable = .x, .before = 1)
+})
+
+# make the names nicer
+format_varname <- function(x) {
+  x %>%
+    str_replace_all("_", " ") %>%
+    str_replace("num crimes", "Total crimes") %>%
+    str_to_title() %>%
+    str_replace("And", "and")
+}
+
+panel$Variable <- format_varname(panel$Variable)
+
+# make the table
+full_table <- panel
+
+# round relevant columns
+full_table <- full_table %>%
+  mutate(across(c(Mean, SD), ~round(., 3)))
+
+# order the table by total number of crimes
+full_table <- full_table %>%
+  arrange(desc(Nonzero))
+
+# prepare table for LaTeX
+latex_table <- full_table %>%
+  select(Variable, N, Mean, SD, Median, P75, P90, P95, P99, Max, Total_Count, Nonzero, PCT_Nonzero) %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "Summary Statistics",
+    label = "tab:summary_stats",
+    col.names = c("Variable", "N", "Mean", "SD", "Median", "P75", "P90", "P95", "P99", "Max", "Total Count", "Nonzero", "\\% Nonzero"),
+    align = c("l", rep("c", 12)),
+    digits = 3,
+    escape = FALSE  # needed if using LaTeX symbols in column names
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) %>%
+  row_spec(0, bold = TRUE)  # bold header row
+
+# Save to .tex file
+writeLines(latex_table, "Crime and night tubes/Output/Figures/crimes_summary_stats.tex")
 
 ############################################################
 
-# plot a histogram of the crime counts
+# now make a similar table for distance stats
 
-ggplot(final_data, aes(x = num_crimes)) +
-  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.5) +
-  labs(title = "Histogram of Number of Crimes per Location-Month",
-       x = "Number of Crimes",
-       y = "Frequency") +
-  xlim(-1, 50) +
-  labs(caption = "Note: Values above 50 are not shown") +
-  theme_minimal()
+# collect up relevant distance variables
+distance_vars <- c(
+  "min_any_dist",
+  "min_nt_central_dist",
+  "min_nt_jubilee_dist",
+  "min_nt_northern_dist",
+  "min_nt_piccadilly_dist",
+  "min_nt_victoria_dist"
+)
+
+# make a summary function that gets the stats we want
+nrows <- length(final_data$min_any_dist)
+calc_summary_distance <- function(x) {
+  x <- x[!is.na(x)]
+  tibble(
+    N_within_2km = length(x),
+    PCT_within_2km = sum(x <= 2) * 100 / nrows,
+    N_within_1km = sum(x <= 1),
+    PCT_within_1km = sum(x <= 1) * 100 / nrows,
+    N_within_0.5km = sum(x <= 0.5),
+    PCT_within_0.5km = sum(x <= 0.5) * 100 / nrows
+  )
+}
+
+# get the summary stats
+panel_distance <- map_dfr(distance_vars, ~{
+  calc_summary_distance(final_data[[.x]]) %>%
+    mutate(Variable = .x, .before = 1)
+})
+
+# make the names nicer
+panel_distance$Variable <- panel_distance$Variable %>%
+  str_replace_all("min_nt_", "Min distance to night tube ") %>%
+  str_replace_all("min_any_dist", "Min distance to any night tube") %>%
+  str_replace_all("_dist", " station") %>%
+  str_replace_all("_", " ") %>%
+  str_to_title()
+
+# make the table
+full_table_distance <- panel_distance
+
+# prepare table for LaTeX
+latex_table_distance <- full_table_distance %>%
+  select(Variable, N_within_2km, PCT_within_2km, N_within_1km, PCT_within_1km, N_within_0.5km, PCT_within_0.5km) %>%
+  kbl(
+    format = "latex",
+    booktabs = TRUE,
+    caption = "Distance Statistics",
+    label = "tab:distance_stats",
+    col.names = c("Variable", "N within 2km", "\\% within 2km", "N within 1km", "\\% within 1km", "N within 0.5km", "\\% within 0.5km"),
+    align = c("l", rep("c", 6)),
+    digits = 0
+  ) %>%
+  kable_styling(
+    latex_options = c("hold_position", "scale_down"),
+    font_size = 10
+  ) %>%
+    row_spec(0, bold = TRUE)  # bold header row
+
+# Save to .tex file
+writeLines(latex_table_distance, "Crime and night tubes/Output/Figures/distance_summary_stats.tex")
+
+############################################################
+
+# plot a binned bar chart of the crime counts
+
+# first define the bins
+crime_bins <- final_data %>%
+  mutate(crime_category = cut(
+    num_crimes,
+    breaks = c(-Inf, 0, 1, 2, 5, 10, 20, 50, Inf),
+    labels = c("0", "1", "2", "3-5", "6-10", "11-20", "21-50", "50+")
+  )) %>%
+  count(crime_category) %>%
+  mutate(pct = n / sum(n) * 100)
+
+# now plot it
+ggplot(crime_bins, aes(x = crime_category, y = pct)) +
+  geom_col(fill = "blue", color = "black", alpha = 0.5) +
+  geom_text(aes(label = sprintf("%.2f%%", pct)), vjust = -0.5, size = 3) +
+  labs(
+    title = "Distribution of Crimes per Location-Month",
+    subtitle = "Grouped into categories",
+    x = "Number of Crimes",
+    y = "Percentage of Observations"
+  ) +
+  theme_minimal() +
+  theme(panel.grid.major.x = element_blank())
 
 # save
-ggsave("Crime and night tubes/Output/Figures/histogram_num_crimes.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/bar_chart_num_crimes.png", width = 8, height = 6)
 
-# MAKE THIS MUCH BETTER
+
+# now do the same for thefts and robberies
+
+# first preprocess the data into long format in order to calculate the correct counts
+crime_bins_long <- final_data %>%
+  select(robbery, theft_from_the_person) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "crime_type",
+    values_to = "count"
+  ) %>%
+  mutate(
+    crime_category = cut(
+      count,
+      breaks = c(-Inf, 0, 1, 2, 5, 10, Inf),
+      labels = c("0", "1", "2", "3-5", "6-10", "11+")
+    ),
+    crime_type = case_when(
+      crime_type == "robbery" ~ "Robbery",
+      crime_type == "theft_from_the_person" ~ "Theft from Person"
+    )
+  ) %>%
+  count(crime_type, crime_category) %>%
+  group_by(crime_type) %>%
+  mutate(pct = n / sum(n) * 100) %>%
+  ungroup()
+
+# now plot it
+ggplot(crime_bins_long, aes(x = crime_category, y = pct)) +
+  geom_col(fill = "blue", color = "black", alpha = 0.5) +
+  geom_text(aes(label = sprintf("%.2f%%", pct)), vjust = -0.5, size = 2.8) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
+  facet_wrap(~crime_type) +
+  labs(
+    x = "Number of Crimes per Location-Month",
+    y = "Percentage of Observations"
+  ) +
+  theme_minimal(base_size = 11) +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.text = element_text(face = "bold", size = 11),
+    axis.line = element_line(color = "black", linewidth = 0.3)
+  )
+
+# save
+ggsave("Crime and night tubes/Output/Figures/bar_chart_theft_robbery.png", width = 8, height = 5)
 
 ############################################################
