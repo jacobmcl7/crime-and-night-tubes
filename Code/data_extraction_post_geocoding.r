@@ -120,6 +120,88 @@ location_info <- min_dist_any %>%
   left_join(min_dist_northern, by = "location")
 
 
+# it is also important to note that not all stations on these lines are night tube stations
+# so we will also create variables giving the minimum distance to a night tube station on each line
+
+# first, create vectors of the stations on each night tube line not served by the night tube
+central_line_no_night_tube <- c("West Ruislip", "Ruislip Gardens", "South Ruislip", "Northolt", "Greenford", "Perivale", "Hanger Lane", "Debden", "Theydon Bois", "Epping", "Grange Hill", "Chigwell", "Roding Valley")
+northern_line_no_night_tube <- c("Mill Hill East", "Nine Elms", "Battersea Power Station", "King's Cross St. Pancras", "Angel", "Old Street", "Moorgate", "Bank", "London Bridge", "Borough", "Elephant & Castle")
+piccadilly_line_no_night_tube <- c("Heathrow Terminal 4", "Uxbridge", "Hillingdon", "Ickenham", "Ruislip", "Ruislip Manor", "Eastcote", "Rayners Lane", "South Harrow", "Sudbury Hill", "Sudbury Town", "Alperton", "Park Royal", "North Ealing", "Ealing Common")
+
+# now adjust the ls_pairs dataset to exclude these stations when calculating minimum distances
+# first copy over a new variable that keeps the observation only if the line is one of the night tube lines and the station isn't in the no night tube list
+ls_pairs <- ls_pairs %>%
+    mutate(night_tube = case_when(
+        grepl("Jubilee", LINES, fixed = TRUE) ~ TRUE,
+        grepl("Victoria", LINES, fixed = TRUE) ~ TRUE,
+        grepl("Central", LINES, fixed = TRUE) & !(NAME %in% central_line_no_night_tube) ~ TRUE,
+        grepl("Northern", LINES, fixed = TRUE) & !(NAME %in% northern_line_no_night_tube) ~ TRUE,
+        grepl("Piccadilly", LINES, fixed = TRUE) & !(NAME %in% piccadilly_line_no_night_tube) ~ TRUE,
+        TRUE ~ FALSE
+    ))
+
+# now repeat the minimum distance calculations, but only for night tube stations
+
+# first Central
+min_nt_dist_central <- ls_pairs %>%
+  # filter only rows where LINES contains "Central" and night_tube is TRUE
+  filter(grepl("Central", LINES, fixed = TRUE) & night_tube) %>%
+  # now for each location, get the minimum distance from a night tube station and the corresponding station
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_nt_central_dist = NEAR_DIST,
+          central_nt_station = NAME) %>%
+  select(location, min_nt_central_dist, central_nt_station)
+
+# now Jubilee
+min_nt_dist_jubilee <- ls_pairs %>%
+  filter(grepl("Jubilee", LINES, fixed = TRUE) & night_tube) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_nt_jubilee_dist = NEAR_DIST,
+         jubilee_nt_station = NAME) %>%
+  select(location, min_nt_jubilee_dist, jubilee_nt_station)
+
+# now Piccadilly
+min_nt_dist_piccadilly <- ls_pairs %>%
+  filter(grepl("Piccadilly", LINES, fixed = TRUE) & night_tube) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_nt_piccadilly_dist = NEAR_DIST,
+         piccadilly_nt_station = NAME) %>%
+  select(location, min_nt_piccadilly_dist, piccadilly_nt_station)
+
+# now Victoria
+min_nt_dist_victoria <- ls_pairs %>%
+  filter(grepl("Victoria", LINES, fixed = TRUE) & night_tube) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_nt_victoria_dist = NEAR_DIST,
+         victoria_nt_station = NAME) %>%
+  select(location, min_nt_victoria_dist, victoria_nt_station)
+
+# now Northern
+min_nt_dist_northern <- ls_pairs %>%
+  filter(grepl("Northern", LINES, fixed = TRUE) & night_tube) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_nt_northern_dist = NEAR_DIST,
+         northern_nt_station = NAME) %>%
+  select(location, min_nt_northern_dist, northern_nt_station)
+
+# now merge all of these minimum distance datasets together with location info
+location_info <- location_info %>%
+  left_join(min_nt_dist_central, by = "location") %>%
+  left_join(min_nt_dist_jubilee, by = "location") %>%
+  left_join(min_nt_dist_piccadilly, by = "location") %>%
+  left_join(min_nt_dist_victoria, by = "location") %>%
+  left_join(min_nt_dist_northern, by = "location")
+
 ###############################################################
 
 
@@ -208,10 +290,6 @@ final_data <- final_data %>%
 
     # finally get the location, the month, the period, and the number of crimes as the first columns
     relocate(location, Month, period, num_crimes, log_num_crimes, all_of(crime_types), starts_with("log_"))
-
-    # get the location, the month, the period, and the number of crimes as the first columns
-    relocate(location, Month, period, num_crimes, log_num_crimes, Burglary, log_burglary, `Shoplifting`, log_shoplifting, `Theft from the person`, log_theft_from_person, Robbery, log_robbery)
-
 
 
 ##############################################################
