@@ -840,6 +840,40 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_all.png", width = 8, height = 6)
 
 
+# alternative method - use the mgcv package to fit a generalised additive model (GAM)
+library(mgcv)
+
+# Fit using bam() - optimized for large datasets
+model_gam <- bam(residuals ~ s(min_active_dist, k = 20),
+                 data = data_subset,
+                 discrete = TRUE,  # major speed boost for large N
+                 nthreads = 4)     # parallel processing
+
+# Create prediction grid with SEs
+pred_grid <- data.frame(min_active_dist = seq(min(data_subset$min_active_dist),
+                                               max(data_subset$min_active_dist),
+                                               length.out = 100))
+
+preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
+pred_grid$y <- preds$fit
+pred_grid$se <- preds$se.fit
+pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
+
+# Plot
+ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
+  geom_line(color = "blue") +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_all.png", width = 8, height = 6)
+
+
 
 
 # now loop over six month periods from 0-5 to 12-17, doing a kernel regression for each and saving the predictions
@@ -925,6 +959,61 @@ ggplot() +
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", width = 8, height = 6)
+
+
+
+
+# now do it with residuals from a Poisson regression
+
+# do the regression
+TWFE_1km_theft_poisson <- etwfe(
+  fml = theft_from_the_person ~ 1,
+  tvar = period,
+  gvar = first_treatment_1,
+  data = final_data,
+  vcov = ~location, 
+  family = "poisson",
+  cgroup = "never"
+)
+
+# get the residuals
+final_data <- final_data %>%
+  mutate(residuals_poisson = resid(TWFE_1km_theft_poisson))
+
+# subset the data to include only post-treatment observations
+data_subset <- final_data %>%
+  filter(event_time_1 >= 0)
+
+# fit a GAM using bam()
+model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
+                 data = data_subset,
+                 discrete = TRUE,  # major speed boost for large N
+                 nthreads = 4)     # parallel processing
+
+# Create prediction grid with SEs
+pred_grid <- data.frame(min_active_dist = seq(min(data_subset$min_active_dist),
+                                               max(data_subset$min_active_dist),
+                                               length.out = 100))
+
+preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
+pred_grid$y <- preds$fit
+pred_grid$se <- preds$se.fit
+pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
+pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
+
+# Plot
+ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
+  geom_line(color = "blue") +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_poisson.png", width = 8, height = 6)
+
 
 
 
