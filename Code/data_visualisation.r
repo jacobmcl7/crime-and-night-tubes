@@ -6,19 +6,21 @@ library(ggplot2)
 library(tidyverse)
 library(patchwork)
 library(vtable)
+library(openxlsx)
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
 
 # load in the data
 load("Crime and night tubes EXTRA DATA/final_data.RData")
-load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
+# load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
 
 
 ########################################################
 # define some functions
 # NOTE - MOVE THESE ALL TO POST-GEOCODING SCRIPT?
 ########################################################
+
 
 # first a function that prepares the regression results for plotting of event-study coefficients
 # the input to this function will be the output of a regression done using the 'feols' package
@@ -98,22 +100,22 @@ define_treatment_event_time <- function(distance, data) {
     # Piccadilly: 16 Dec 2016 (ftm = 24)
     # we therefore define the current treatment status variable as follows
     mutate(!!treatment_col := ifelse(
-      (!is.na(min_central_dist) & min_central_dist < distance & period >= 20) |
-      (!is.na(min_jubilee_dist) & min_jubilee_dist < distance & period >= 22) |
-      (!is.na(min_northern_dist) & min_northern_dist < distance & period >= 23) |
-      (!is.na(min_piccadilly_dist) & min_piccadilly_dist < distance & period >= 24) |
-      (!is.na(min_victoria_dist) & min_victoria_dist < distance & period >= 20),
+      (!is.na(min_nt_central_dist) & min_nt_central_dist < distance & period >= 20) |
+      (!is.na(min_nt_jubilee_dist) & min_nt_jubilee_dist < distance & period >= 22) |
+      (!is.na(min_nt_northern_dist) & min_nt_northern_dist < distance & period >= 23) |
+      (!is.na(min_nt_piccadilly_dist) & min_nt_piccadilly_dist < distance & period >= 24) |
+      (!is.na(min_nt_victoria_dist) & min_nt_victoria_dist < distance & period >= 20),
       1,
       0
     )) %>%
 
     # create first_treatment variable, assigning it infninity to all untreated locations
     mutate(!!first_treatment_col := Inf) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_piccadilly_dist) & min_piccadilly_dist < distance, 24, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_northern_dist) & min_northern_dist < distance, 23, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_jubilee_dist) & min_jubilee_dist < distance, 22, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_victoria_dist) & min_victoria_dist < distance, 20, !!sym(first_treatment_col))) %>%
-    mutate(!!first_treatment_col := ifelse(!is.na(min_central_dist) & min_central_dist < distance, 20, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_piccadilly_dist) & min_nt_piccadilly_dist < distance, 24, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_northern_dist) & min_nt_northern_dist < distance, 23, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_jubilee_dist) & min_nt_jubilee_dist < distance, 22, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_victoria_dist) & min_nt_victoria_dist < distance, 20, !!sym(first_treatment_col))) %>%
+    mutate(!!first_treatment_col := ifelse(!is.na(min_nt_central_dist) & min_nt_central_dist < distance, 20, !!sym(first_treatment_col))) %>%
     
 
     # finally, create a set of event time dummies
@@ -138,10 +140,10 @@ define_distance_bands <- function(thresholds, distance, data) {
 
     # first create a variable giving distace to closest active night tube station
     mutate(min_active_dist := case_when(
-      (!!sym(first_treatment_col) == 20) ~ pmin(min_central_dist, min_victoria_dist, na.rm = TRUE),
-      (!!sym(first_treatment_col) == 22) ~ min_jubilee_dist,
-      (!!sym(first_treatment_col) == 23) ~ min_northern_dist,
-      (!!sym(first_treatment_col) == 24) ~ min_piccadilly_dist,
+      (!!sym(first_treatment_col) == 20) ~ pmin(min_nt_central_dist, min_nt_victoria_dist, na.rm = TRUE),
+      (!!sym(first_treatment_col) == 22) ~ min_nt_jubilee_dist,
+      (!!sym(first_treatment_col) == 23) ~ min_nt_northern_dist,
+      (!!sym(first_treatment_col) == 24) ~ min_nt_piccadilly_dist,
       TRUE ~ Inf
     ))
     # min_active_dist is dependent on treatment!! Either add a _dist, or make it independent of treatment
@@ -165,7 +167,6 @@ define_distance_bands <- function(thresholds, distance, data) {
 
 # NEED TO CHECK THIS ONE ABOVE
 
-
 ############################################################
 # prepare the data for analysis
 ############################################################
@@ -181,8 +182,8 @@ final_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), dista
 
 
 # now do the exact same for the house price data
-house_data <- define_treatment_event_time(distance = 1, data = house_data)
-house_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = house_data)
+# house_data <- define_treatment_event_time(distance = 1, data = house_data)
+# house_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), distance = 1, data = house_data)
 
 # CHECK THESE WORKED! graphs are the same, so it seems to be fine, but check the functions
 
@@ -191,8 +192,8 @@ final_data <- final_data %>%
   filter(min_any_dist < 2)
 
 # filter now the house data for only for locations within 2km of a station (NOTE - I think it already satisfies this. Check the post-geocoding processing)
-house_data <- house_data %>%
-  filter(min_any_dist < 2)
+# house_data <- house_data %>%
+#   filter(min_any_dist < 2)
 
 
 
@@ -389,8 +390,79 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 # now do the same, but using only regions within 2km of a night tube station
 
-# DO THIS!
+# keep only those observations where any of min_nt_*_dist < 2
+final_data_nt_near <- final_data %>%
+  filter(
+    !is.na(min_nt_central_dist) |
+    !is.na(min_nt_jubilee_dist) |
+    !is.na(min_nt_northern_dist) |
+    !is.na(min_nt_piccadilly_dist) |
+    !is.na(min_nt_victoria_dist)
+  )
 
+mean_data_nt_near <- final_data_nt_near %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means_nt_near <- mean_data_nt_near %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment_1) %>%
+  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_nt_near <- mean_data_nt_near %>%
+  left_join(baseline_means_nt_near, by = "first_treatment_1") %>%
+  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_nt_near, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log number of crimes over time by first treatment period (within 2km of night tube station)",
+       x = "Month",
+       y = "Mean log number of crimes",
+       color = "First Treatment Period",
+       note = "Modified control group - regions between 1-2km of night tube station") +
+  theme_minimal()
+
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_2km_nt.png", width = 8, height = 6)
+
+
+# same but for thefts
+mean_data_nt_near_theft <- final_data_nt_near %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_log_theft_from_the_person = mean(log_theft_from_the_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means_nt_near_theft <- mean_data_nt_near_theft %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment_1) %>%
+  summarise(baseline_mean = mean(mean_log_theft_from_the_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_nt_near_theft <- mean_data_nt_near_theft %>%
+  left_join(baseline_means_nt_near_theft, by = "first_treatment_1") %>%
+  mutate(adjusted_mean_log_theft_from_the_person = mean_log_theft_from_the_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_nt_near_theft, aes(x = period, y = adjusted_mean_log_theft_from_the_person, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log theft from the person over time by first treatment period (within 2km of night tube station)",
+       x = "Month",
+       y = "Mean log theft from the person",
+       color = "First Treatment Period",
+       note = "Modified control group - regions between 1-2km of night tube station") +
+  theme_minimal()
+
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time_within_2km_nt.png", width = 8, height = 6)
 
 
 
@@ -632,3 +704,44 @@ ggplot(crime_bins_long, aes(x = crime_category, y = pct)) +
 ggsave("Crime and night tubes/Output/Figures/bar_chart_theft_robbery.png", width = 8, height = 5)
 
 ############################################################
+
+# get the theft and robbery count in the last six months before first treatment, and last six months of the sample
+
+# do this for the whole of the sample, not just the subset within 2km of a station
+load("Crime and night tubes EXTRA DATA/final_data.RData")
+# final_data is reloaded here
+
+# create the summary table
+theft_robbery_summary <- final_data %>%
+  mutate(
+    pre_treatment_period = ifelse(period >= 13 & period <= 18, 1, 0),
+    post_treatment_period = ifelse(period >= 31 & period <= 36, 1, 0)
+  ) %>%
+  group_by(location) %>%
+  summarise(
+    thefts_pre_treatment = sum(theft_from_the_person * pre_treatment_period, na.rm = TRUE),
+    robberies_pre_treatment = sum(robbery * pre_treatment_period, na.rm = TRUE),
+    thefts_post_treatment = sum(theft_from_the_person * post_treatment_period, na.rm = TRUE),
+    robberies_post_treatment = sum(robbery * post_treatment_period, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# get the proportional difference of the sum
+theft_robbery_summary <- theft_robbery_summary %>%
+  mutate(
+    thefts_robberies_pre = thefts_pre_treatment + robberies_pre_treatment,
+    thefts_robberies_post = thefts_post_treatment + robberies_post_treatment,
+    thefts_robberies_prop_diff = ifelse(thefts_robberies_pre > 0, (thefts_robberies_post - thefts_robberies_pre) / thefts_robberies_pre, NA)
+  )
+
+# split location into lat and long separately, by taking values before and after the comma
+theft_robbery_summary <- theft_robbery_summary %>%
+  separate(location, into = c("latitude", "longitude"), sep = ", ") %>%
+  mutate(
+    latitude = as.numeric(latitude),
+    longitude = as.numeric(longitude)
+  )
+
+
+# export it to excel to be visualised in ArcGIS
+write.xlsx(theft_robbery_summary, "Crime and night tubes EXTRA DATA/theft_robbery_summary.xlsx")

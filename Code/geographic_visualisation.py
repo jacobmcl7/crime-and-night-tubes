@@ -95,3 +95,67 @@ set_polygon_symbology(lyr_night_stations, [200, 50, 50, 255], [0, 0, 0, 255], ou
 # now create a layout, and organise it nicely
 # this has to be done within the UI, so just export the layout once done
 # I also just export the completed layout frame manually
+
+
+
+########################################################################
+
+# now make a heatmap for change in thefts and robberies around London after vs before treatment
+
+# load in the excel data created in data_visualisation.r
+arcpy.conversion.ExcelToTable(
+    Input_Excel_File=r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\theft_robbery_summary.xlsx",
+    Output_Table=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\graphic_visualisation\graphic_visualisation.gdb\theft_robbery_summary_ExcelToTable",
+    Sheet="",
+    field_names_row=1,
+    cell_range=""
+)
+
+# load in wards shapefile
+wards = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\Wards shapefile\WD_MAY_2024_UK_BSC.shp"
+wards = arcpy.management.MakeFeatureLayer(wards, "wards")
+
+# geocode the theft_robbery_summary table
+crime_locations = r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\graphic_visualisation\graphic_visualisation.gdb\crime_locations"
+arcpy.management.XYTableToPoint(
+    in_table="theft_robbery_summary_ExcelToTable",
+    out_feature_class=crime_locations,
+    x_field="longitude",
+    y_field="latitude",
+    z_field=None,
+    coordinate_system='GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]];-400 -400 1000000000;-100000 10000;-100000 10000;8.98315284119521E-09;0.001;0.001;IsHighPrecision'
+)
+
+# now join ward ID to each point
+temp_join = r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\graphic_visualisation\graphic_visualisation.gdb\temp_join"
+arcpy.analysis.SpatialJoin(
+    target_features=crime_locations,
+    join_features=wards,
+    out_feature_class=temp_join,
+    join_operation="JOIN_ONE_TO_ONE",
+    match_option="WITHIN"
+)
+
+# calculate mean thefts_diff by ward
+output_table = r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\graphic_visualisation\graphic_visualisation.gdb\thefts_diff_by_ward"
+arcpy.analysis.Statistics(
+    in_table=temp_join,
+    out_table=output_table,
+    statistics_fields=[["thefts_robberies_prop_diff", "MEAN"]],
+    case_field="WD24CD"
+)
+
+# now join the averages back to the ward polygons
+arcpy.management.JoinField(
+    in_data=wards,
+    in_field="WD24CD",
+    join_table=output_table,
+    join_field="WD24CD",
+    fields=["MEAN_thefts_robberies_prop_diff"]
+)
+
+# Now manually make the chloropleth map in ArcGIS Pro:
+# 1. Right-click layer > Symbology
+# 2. Choose Graduated Colors
+# 3. Set Field to MEAN_thefts_robberies_prop_diff
+# 4. Choose a color ramp and number of classes

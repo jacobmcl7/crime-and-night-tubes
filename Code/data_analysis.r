@@ -355,7 +355,24 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
 ####################################################################
 
-# ADD CONTROLS! This goes here
+# now do it with some controls
+
+# 1) allow the effect of being close to a station to vary by month
+
+TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, min_any_dist) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_controls, substring = "event_time_1")
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "Dynamic TWFE results with controls", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# note: adding time x region controls seems to restrict variation too much, leading to lost significance
 
 ####################################################################
 
