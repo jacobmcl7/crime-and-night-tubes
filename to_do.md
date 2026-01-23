@@ -14,8 +14,8 @@ next things to do:
  - sort out BJS estimation
  - organise the data cleaning much better! merge the parallel cleaning processes together, for example
  - organise the data analysis much better! maybe define treatment in the cleaning, for example, and make the functions nicer
- - get SEs for the nonparametric estimation
  - Poisson graphing wrong? check intercept at et = -1
  - think about applying for more granular crime data from uk police
  - make all graphs nicer
  - think about police response? maybe optimal police allocation across stations. But then who outside of London cares?
+ - fix Poisson non-parametric estimation - wrong residuals (the true ones are unobservable?)
