@@ -231,6 +231,9 @@ ggplot(mean_data, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.f
        color = "First Treatment Period") +
   theme_minimal()
 
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time.png", width = 8, height = 6)
+
 
 # now do it after grouping into three month bins
 mean_data_binned <- final_data %>%
@@ -274,29 +277,32 @@ ggplot(mean_data_binned, aes(x = period_bin, y = adjusted_mean_log_num_crimes, c
        color = "First Treatment Period") +
   theme_minimal()
 
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_binned.png", width = 8, height = 6)
+
 
 ############################################################
 
 # now do the same for thefts
 mean_data_theft <- final_data %>%
   group_by(period, first_treatment_1) %>%
-  summarise(mean_log_theft_from_person = mean(log_theft_from_person, na.rm = TRUE)) %>%
+  summarise(mean_log_theft_from_the_person = mean(log_theft_from_the_person, na.rm = TRUE)) %>%
   ungroup()
 
 # edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
 baseline_means_theft <- mean_data_theft %>%
   filter(period >= 1 & period <= 19) %>%
   group_by(first_treatment_1) %>%
-  summarise(baseline_mean = mean(mean_log_theft_from_person, na.rm = TRUE)) %>%
+  summarise(baseline_mean = mean(mean_log_theft_from_the_person, na.rm = TRUE)) %>%
   ungroup()
 
 # join the baseline means back to the mean data
 mean_data_theft <- mean_data_theft %>%
   left_join(baseline_means_theft, by = "first_treatment_1") %>%
-  mutate(adjusted_mean_log_theft_from_person = mean_log_theft_from_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+  mutate(adjusted_mean_log_theft_from_the_person = mean_log_theft_from_the_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
 
 # plot it as a line graph, by first treatment period
-ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
+ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_the_person, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
   geom_line() +
   geom_point() +
   labs(title = "Mean log theft from the person over time by first treatment period",
@@ -304,6 +310,90 @@ ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_person,
        y = "Mean log theft from the person",
        color = "First Treatment Period") +
   theme_minimal()
+
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time.png", width = 8, height = 6)
+
+
+############################################################
+
+# now do the same thing for different control groups - first just locations within 1km of any station
+
+mean_data_near <- final_data %>%
+  filter(min_any_dist < 1) %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_log_num_crimes = mean(log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means_near <- mean_data_near %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment_1) %>%
+  summarise(baseline_mean = mean(mean_log_num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_near <- mean_data_near %>%
+  left_join(baseline_means_near, by = "first_treatment_1") %>%
+  mutate(adjusted_mean_log_num_crimes = mean_log_num_crimes - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_near, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log number of crimes over time by first treatment period (within 1km of any station)",
+       x = "Month",
+       y = "Mean log number of crimes",
+       color = "First Treatment Period",
+       note = "Modified control group - regions within 1km of any station") +
+  theme_minimal()
+
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_1km.png", width = 8, height = 6)
+
+
+# same but for thefts
+mean_data_near_theft <- final_data %>%
+  filter(min_any_dist < 1) %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_log_theft_from_the_person = mean(log_theft_from_the_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# edit the data so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means_near_theft <- mean_data_near_theft %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment_1) %>%
+  summarise(baseline_mean = mean(mean_log_theft_from_the_person, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data_near_theft <- mean_data_near_theft %>%
+  left_join(baseline_means_near_theft, by = "first_treatment_1") %>%
+  mutate(adjusted_mean_log_theft_from_the_person = mean_log_theft_from_the_person - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+ggplot(mean_data_near_theft, aes(x = period, y = adjusted_mean_log_theft_from_the_person, color = as.factor(first_treatment_1), group = as.factor(first_treatment_1))) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Mean log theft from the person over time by first treatment period (within 1km of any station)",
+       x = "Month",
+       y = "Mean log theft from the person",
+       color = "First Treatment Period",
+       note = "Modified control group - regions within 1km of any station") +
+  theme_minimal()
+
+# save
+ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time_within_1km.png", width = 8, height = 6)
+
+############################################################
+
+# now do the same, but using only regions within 2km of a night tube station
+
+# DO THIS!
+
+
+
+
 
 ############################################################
 
