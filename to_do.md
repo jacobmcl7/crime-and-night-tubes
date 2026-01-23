@@ -7,8 +7,6 @@ next things to do:
  - sort out BJS estimation
  - organise the data cleaning much better! merge the parallel cleaning processes together, for example
  - organise the data analysis much better! maybe define treatment in the cleaning, for example, and make the functions nicer
- - look at DC+DH (2024) paper - might be useful in this context
  - get SEs for the nonparametric estimation
  - write a detailed outline structure
- - think about structural modelling for crime commute costs
  - Poisson graphing wrong? check intercept at et = -1
