@@ -292,6 +292,45 @@ final_data <- final_data %>%
     relocate(location, Month, period, num_crimes, log_num_crimes, all_of(crime_types), starts_with("log_"))
 
 
+
+
+##############################################################
+
+# finally, get the controls in
+
+# first load in the ward and msoa data
+locations <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/lsoa_msoa_ward_info_1.xlsx"))
+
+# append them with the pairs from the next files
+for (i in 2:3) {
+    temp <- as.data.frame(read_excel(paste0("Crime and night tubes EXTRA DATA/lsoa_msoa_ward_info_", i, ".xlsx")))
+    locations <- rbind(locations, temp)
+}
+
+# do some cleaning of the data
+locations <- locations %>%
+    # drop the id column inserted by ArcGIS
+    select(-c(OBJECTID)) %>%
+
+    # join longitude and latitude into one location variable, as before
+    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
+    select(-c(Longitude, Latitude))
+
+
+# now import the IMD data
+imd_data <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/IMD data/File_2_ID_2015_Domains_of_deprivation.xlsx", sheet = 2))
+
+# rename some columns for ease of use (column 5)
+colnames(imd_data)[5] <- "IMD"
+colnames(imd_data)[6] <- "IMD_decile"
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(imd_data %>% select(`LSOA code (2011)`, `LSOA name (2011)`, IMD, IMD_decile), by = c("LSOA11CD" = "LSOA code (2011)"))
+
+# some NAs - poor geocoding, so maybe drop them
+
+
 ##############################################################
 
 # the cleaning is done - now save the final dataset

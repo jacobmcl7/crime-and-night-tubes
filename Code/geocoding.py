@@ -21,6 +21,16 @@ wards = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and nig
 wards = arcpy.management.MakeFeatureLayer(wards, "wards")
 
 
+# insert the MSOA shapefile
+msoas = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\Middle_layer_Super_Output_Areas_December_2021_Boundaries_EW_BGC_V3_-6221323399304446140 (1)\MSOA_2021_EW_BGC_V3.shp"
+msoas = arcpy.management.MakeFeatureLayer(msoas, "msoas")
+
+
+# insert the LSOA shapefile
+lsoas = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\LSOA shapefile\LSOA_2011_EW_BFC_V3.shp"
+lsoas = arcpy.management.MakeFeatureLayer(lsoas, "lsoas")
+
+
 # loop over the location excel files
 
 indices = ['1', '2', '3']
@@ -63,17 +73,39 @@ for index in indices:
         match_option="INTERSECT"
     )
 
+    # same for MSOA
+    arcpy.analysis.SpatialJoin(
+        target_features=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\crime_locations_ward",
+        join_features="msoas",
+        out_feature_class=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\crime_locations_ward_msoa",
+        join_operation="JOIN_ONE_TO_ONE",
+        join_type="KEEP_ALL",
+        field_mapping='Longitude "Longitude" true true false 8 Double 0 0,First,#,crime_locations_ward,Longitude,-1,-1;Latitude "Latitude" true true false 8 Double 0 0,First,#,crime_locations_ward,Latitude,-1,-1;WD24CD "WD24CD" true true false 9 Text 0 0,First,#,crime_locations_ward,WD24CD,0,8;WD24NM "WD24NM" true true false 53 Text 0 0,First,#,crime_locations_ward,WD24NM,0,52;MSOA21CD "MSOA21CD" true true false 9 Text 0 0,First,#,msoas,MSOA21CD,0,8;MSOA21NM "MSOA21NM" true true false 53 Text 0 0,First,#,msoas,MSOA21NM,0,52',
+        match_option="INTERSECT"
+    )
+
+    # same for LSOA
+    arcpy.analysis.SpatialJoin(
+        target_features=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\crime_locations_ward_msoa",
+        join_features="lsoas",
+        out_feature_class=r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\crime_data_geocoding\crime_data_geocoding.gdb\crime_locations_ward_msoa_lsoa",
+        join_operation="JOIN_ONE_TO_ONE",
+        join_type="KEEP_ALL",
+        field_mapping='Longitude "Longitude" true true false 8 Double 0 0,First,#,crime_locations_ward_msoa,Longitude,-1,-1;Latitude "Latitude" true true false 8 Double 0 0,First,#,crime_locations_ward_msoa,Latitude,-1,-1;WD24CD "WD24CD" true true false 9 Text 0 0,First,#,crime_locations_ward_msoa,WD24CD,0,8;WD24NM "WD24NM" true true false 53 Text 0 0,First,#,crime_locations_ward_msoa,WD24NM,0,52;MSOA21CD "MSOA21CD" true true false 9 Text 0 0,First,#,crime_locations_ward_msoa,MSOA21CD,0,8;MSOA21NM "MSOA21NM" true true false 53 Text 0 0,First,#,crime_locations_ward_msoa,MSOA21NM,0,52;LSOA11CD "LSOA11CD" true true false 9 Text 0 0,First,#,lsoas,LSOA11CD,0,8;LSOA11NM "LSOA11NM" true true false 53 Text 0 0,First,#,lsoas,LSOA11NM,0,52',
+        match_option="INTERSECT"
+    )
+
     # delete irrelevant fields
     arcpy.management.DeleteField(
-        in_table="crime_locations_ward",
+        in_table="crime_locations_ward_msoa_lsoa",
         drop_field="Join_Count;TARGET_FID;DDMLat;DDMLon;ORIG_OID",
         method="DELETE_FIELDS"
     )
 
     # export as an excel file
     arcpy.conversion.TableToExcel(
-        Input_Table='crime_locations_ward',
-        Output_Excel_File=fr"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\ward_info_{index}.xlsx",
+        Input_Table='crime_locations_ward_msoa_lsoa',
+        Output_Excel_File=fr"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes EXTRA DATA\lsoa_msoa_ward_info_{index}.xlsx",
         Use_field_alias_as_column_header="NAME",
         Use_domain_and_subtype_description="CODE"
     )
@@ -99,7 +131,7 @@ for index in indices:
     arcpy.management.JoinField(
         in_data="near_table",
         in_field="IN_FID",
-        join_table="crime_locations",
+        join_table="crime_locations_ward_msoa",
         join_field="OBJECTID",
         fields=None,
         fm_option="NOT_USE_FM",
@@ -125,6 +157,8 @@ for index in indices:
         drop_field="IN_FID;NEAR_FID;NEAR_RANK;DDMLat;DDMLon;Join_Count;TARGET_FID;ORIG_OID;OBJECTID_1;ATCOCODE;MODES;ACCESSIBIL;NIGHT_TUBE;NETWORK;DATASET_LA;FULL_NAME",
         method="DELETE_FIELDS"
     )
+
+    # may need to remove more irrelevant fields here - unless I deal with them in the r script later
 
     # export the near table as an excel file, to be merged in with the crime data
     arcpy.conversion.TableToExcel(
