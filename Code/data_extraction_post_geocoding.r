@@ -331,6 +331,10 @@ locations <- locations %>%
 # some NAs - poor geocoding, so maybe drop them
 
 
+# merge with the final data, on location
+final_data <- final_data %>%
+    left_join(locations %>% select(location, WD24NM, MSOA21NM, LSOA11NM, IMD, IMD_decile), by = "location")
+
 ##############################################################
 
 # the cleaning is done - now save the final dataset

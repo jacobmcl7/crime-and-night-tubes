@@ -357,19 +357,19 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
 # now do it with some controls
 
-# 1) allow the effect of being close to a station to vary by month
+# allow the effect of being close to a station, and the wealth of the region, to vary by month
 
-TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, min_any_dist) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, min_any_dist) + i(Month, IMD_decile) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls, substring = "event_time_1")
 
 # plot the graph
 plot(coefs = coefs, 
-    xsequence = seq(-20, 15, 5), 
+    xsequence = seq(-20, 15, 5),
     ymin = -0.05,
     ymax = 0.05,
-    title = "Dynamic TWFE results with controls", 
+    title = "Dynamic TWFE results with controls",
     note = "Simple treatment definition, theshold = 1km")
 
 # note: adding time x region controls seems to restrict variation too much, leading to lost significance
@@ -421,6 +421,50 @@ p1 + p2 + p3 + p4 +
 # save the graph
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, height = 8)
 
+
+#####################################################################
+
+# disaggregate by wealth of the region
+
+# first use the IMD to create a high/low wealth dummy for all observations for which first_treatment_1 < Inf
+# do this so the median is only calculated over treated locations
+imd_median <- median(final_data$IMD[final_data$first_treatment_1 < Inf], na.rm = TRUE)
+
+# now create the dummy
+final_data <- final_data %>%
+  mutate(high_wealth := ifelse(IMD < imd_median & first_treatment_1 < Inf, 1, 0))
+
+# now create event-time variables for rich and poor treated regions
+final_data <- final_data %>%
+  mutate(event_time_rich := ifelse(high_wealth == 1, event_time_1, -1)) %>%
+  mutate(event_time_poor := ifelse(high_wealth == 0 & first_treatment_1 < Inf, event_time_1, -1))
+
+# now these can be used in a regression
+TWFE_1km_disagg <- feols(log_theft_from_the_person ~ i(event_time_rich, ref = -1) + i(event_time_poor, ref = -1) | location + Month, data = final_data, cluster = "location")
+
+# now prepare the coefficients for plotting
+coefs_rich <- plot_prepare(TWFE_1km_disagg, substring = "event_time_rich")
+coefs_poor <- plot_prepare(TWFE_1km_disagg, substring = "event_time_poor")
+
+# plot them, side by side
+p1 <- plot(coefs = coefs_rich, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "High Wealth Areas")
+
+p2 <- plot(coefs = coefs_poor, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "Low Wealth Areas")
+
+# now combine them into a grid
+p1 + p2 +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+  title = 'TWFE results, disaggregated by area wealth',
+  caption = 'Basic treatment definition, threshold = 1km')
 
 
 #####################################################################
