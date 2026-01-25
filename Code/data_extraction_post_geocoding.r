@@ -414,9 +414,3 @@ save(final_data, file = "Crime and night tubes EXTRA DATA/final_data.RData")
 
 # from this we can define treatment, as we need to, and then run the appropriate regressions
 # this is the key decision, which will be made (and varied) in the next R script
-
-
-##############################################################
-
-# note our controls:
-# distance to nearest station - min_any_dist
