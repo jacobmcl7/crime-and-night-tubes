@@ -795,3 +795,23 @@ ggplot(police_response_data) +
        x = "Period") +
   theme_minimal() +
   theme(legend.position = "bottom")
+
+
+# plot the solve rate over time in the whole sample for the total crime count
+police_response_data <- final_data %>%
+  group_by(period) %>%
+  summarise(
+    total_crimes = sum(num_crimes, na.rm = TRUE),
+    solved_crimes = sum(outcome_yes_all, na.rm = TRUE),
+    solve_rate = solved_crimes / total_crimes * 100
+  ) %>%
+  ungroup()
+
+ggplot(police_response_data, aes(x = period, y = solve_rate)) +
+  geom_line(color = "green", size = 1) +
+  labs(title = "Police Solve Rate Over Time for Total Crimes",
+       x = "Period",
+       y = "Solve Rate (%)") +
+  theme_minimal()
+
+# this shows the dataset needs updating
