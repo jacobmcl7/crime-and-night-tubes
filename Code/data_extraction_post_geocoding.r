@@ -253,6 +253,67 @@ monthly_counts_type <- crime_data %>%
 
 
 
+# also now get a set of outcomes for each location - first reload in the data
+load("Crime and night tubes EXTRA DATA/individual_crime_data.RData")
+
+# rename the outcome variable
+crime_data <- crime_data %>%
+    rename(outcome = Last.outcome.category)
+
+# process the outcome variable - was the offender identified or not?
+# note - this variable is sometimes missing, exactly when the crime is antisocial behaviour
+# since we aren't interested in this, it doesn't matter how we deal with this variable - it just goes into 'unclear'
+crime_data <- crime_data %>%
+    mutate(offender_identified = case_when(
+        outcome %in% c("Investigation complete; no suspect identified", "Unable to prosecute suspect") ~ "No",
+        outcome %in% c("", "Formal action is not in the public interest", "Further investigation is not in the public interest", "Status update unavailable", "Under investigation") ~ "Unclear",
+        TRUE ~ "Yes"
+    )) %>%
+
+    # also change the location variable, as before
+    mutate(location = paste0(Latitude, ", ", Longitude)) %>%
+    select(-c(Latitude, Longitude))
+
+# now get the counts of specific crimes and their outcomes in each location-month
+monthly_counts_outcome_all <- crime_data %>%
+
+    # clean as before
+    group_by(Month, location, offender_identified) %>%
+    summarise(num_crimes = n()) %>%
+    ungroup() %>%
+
+    # reshape wide to get variables for each outcome type
+    pivot_wider(names_from = offender_identified, values_from = num_crimes, values_fill = list(num_crimes = 0)) %>%
+
+    # rename variables
+    rename(outcome_no_all = No,
+           outcome_yes_all = Yes,
+           outcome_unclear_all = Unclear)
+
+# now get the counts of specific crimes and their outcomes in each location-month
+monthly_counts_outcome_type <- crime_data %>%
+
+    # filter only the crimes of interest
+    filter(Crime.type %in% c("Theft from the person", "Robbery")) %>%
+
+    # now exactly as before, but splitting by crime type as well
+
+    # clean as before
+    group_by(Month, location, Crime.type, offender_identified) %>%
+    summarise(num_crimes = n()) %>%
+    ungroup() %>%
+
+    # reshape wide to get variables for each outcome type
+    pivot_wider(names_from = c(offender_identified, Crime.type), values_from = num_crimes, values_fill = list(num_crimes = 0)) %>%
+
+    # rename variables
+    rename(outcome_no_robbery = No_Robbery,
+           outcome_yes_robbery = Yes_Robbery,
+           outcome_unclear_robbery = Unclear_Robbery,
+           outcome_no_theft_from_the_person = `No_Theft from the person`,
+           outcome_yes_theft_from_the_person = `Yes_Theft from the person`,
+           outcome_unclear_theft_from_the_person = `Unclear_Theft from the person`)
+
 ##############################################################
 
 # now merge all the data together, and do some cleaning to make the final dataset
@@ -263,6 +324,10 @@ final_data <- merge(monthly_counts, location_info, by = "location", all.x = TRUE
 
 # now merge in the counts of each crime type as well - now on both location and month
 final_data <- merge(final_data, monthly_counts_type, by = c("location", "Month"), all.x = TRUE)
+
+# also merge in the counts of outcomes
+final_data <- merge(final_data, monthly_counts_outcome_all, by = c("location", "Month"), all.x = TRUE)
+final_data <- merge(final_data, monthly_counts_outcome_type, by = c("location", "Month"), all.x = TRUE)
 
 # now do some final cleaning
 final_data <- final_data %>%
@@ -281,6 +346,9 @@ final_data <- final_data %>%
 
     # for each crime type, replace NAs with 0s
     mutate(across(all_of(crime_types), ~ ifelse(is.na(.), 0, .))) %>%
+
+    # do the same for the outcome counts
+    mutate(across(starts_with("outcome_"), ~ ifelse(is.na(.), 0, .))) %>%
 
     # now include a log of crime count + 1, for each crime type specifically
     mutate(across(all_of(crime_types), ~ log(1 + .), .names = "log_{.col}")) %>%
