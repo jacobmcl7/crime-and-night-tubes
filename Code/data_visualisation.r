@@ -745,3 +745,53 @@ theft_robbery_summary <- theft_robbery_summary %>%
 
 # export it to excel to be visualised in ArcGIS
 write.xlsx(theft_robbery_summary, "Crime and night tubes EXTRA DATA/theft_robbery_summary.xlsx")
+
+
+
+############################################################
+
+# plot the evolution of mean number of thefts and solved number of thefts at red stations over the sample period
+
+# ISSUE - TO GET UPDATED OUTCOMES WE NEED THE NEWER VERSION OF THE DATASET. IGNORE FOR NOW
+
+# start by summing thefts and robberies over all observations that share the same nearest_station and period, and have min_any_dist < 0.25
+police_response_data <- final_data %>%
+  filter(min_any_dist < 0.25) %>%
+  mutate(thefts_robberies = theft_from_the_person + robbery,
+         outcome_yes_thefts_robberies = outcome_yes_theft_from_the_person + outcome_yes_robbery) %>%
+  group_by(closest_station, period) %>%
+  summarise(
+    total_thefts_robberies = sum(thefts_robberies, na.rm = TRUE),
+    solved_thefts_robberies = sum(outcome_yes_thefts_robberies, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# keep if the station is a red station, then get the monthly total number and solved number of thefts and robberies on average
+red_stations <- c("Camden Town", "London Bridge", "North Greenwich", "Vauxhall", "Brixton", "Waterloo", "Oxford Circus", "Leicester Square", "Piccadilly Circus", "Charing Cross", "Victoria", "Hammersmith", "Walthamstow Central", "Stratford")
+
+police_response_data <- police_response_data %>%
+  filter(closest_station %in% red_stations)
+
+# now sum over all stations to get the total number and solved number of thefts and robberies per month
+police_response_data <- police_response_data %>%
+  group_by(period) %>%
+  summarise(
+    total_thefts_robberies = sum(total_thefts_robberies, na.rm = TRUE),
+    solved_thefts_robberies = sum(solved_thefts_robberies, na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# plot the number of total and solved thefts and robberies over time for each station
+ggplot(police_response_data) +
+  geom_line(aes(x = period, y = total_thefts_robberies, color = "blue"), size = 1) +
+  labs(title = "Police Solve Rate and Total Thefts and Robberies Over Time by Station",
+       x = "Period") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggplot(police_response_data) +
+  geom_line(aes(x = period, y = solved_thefts_robberies, color = "red"), size = 1) +
+  labs(title = "Police Solve Rate and Total Thefts and Robberies Over Time by Station",
+       x = "Period") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
