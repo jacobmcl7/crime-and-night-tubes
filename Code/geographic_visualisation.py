@@ -100,6 +100,51 @@ set_polygon_symbology(lyr_night_stations, [200, 50, 50, 255], [0, 0, 0, 255], ou
 
 ########################################################################
 
+# now make a zoomed in map which gives the red stations
+
+# first create a new variable that records whether the station is a night tube station or not
+
+# reload tube stations layer
+tube_stations = r"C:\Users\jpmcl\OneDrive\Documents\Economics\Papers (WIP)\Crime and night tubes\Data\Underground_Stations\Underground_Stations.shp"
+tube_stations = arcpy.management.MakeFeatureLayer(tube_stations, "tube_stations")
+
+# make a vector of names of red stations
+target_names = ["Camden Town", "London Bridge", "North Greenwich", "Vauxhall", "Brixton", "Waterloo", "Oxford Circus", "Leicester Square", "Piccadilly Circus", "Charing Cross", "Victoria", "Hammersmith", "Walthamstow Central", "Stratford"]
+
+# Delete the field if it already exists
+if "red" in [f.name for f in arcpy.ListFields(tube_stations)]:
+    arcpy.DeleteField_management(tube_stations, "red")
+
+# Add the new field
+arcpy.AddField_management(tube_stations, "red", "SHORT")
+
+# Update values
+with arcpy.da.UpdateCursor(tube_stations, ["NAME", "red"]) as cursor:
+    for row in cursor:
+        row[1] = 1 if any(t in row[0] for t in target_names) else 0
+        cursor.updateRow(row)
+
+# name a new feature class containing only red stations
+red_stations = r"C:\Users\jpmcl\OneDrive\Documents\ArcGIS\Projects\graphic_visualisation\graphic_visualisation.gdb\red_stations"
+arcpy.Select_analysis(tube_stations, red_stations, "red = 1")
+
+# now colour them
+aprx = arcpy.mp.ArcGISProject("CURRENT")
+map_obj = aprx.listMaps()[0]
+
+# red stations
+lyr_stations = map_obj.listLayers("red_stations")[0]
+set_polygon_symbology(lyr_stations, [255, 100, 100, 255], [255, 100, 100, 255], outline_width=1)
+
+# recolour the shapefiles from above too (after having renamed them in the TOC)
+lyr_stations = map_obj.listLayers("Other Tube Stations")[0]
+set_polygon_symbology(lyr_stations, [0, 120, 200, 255], [0, 0, 0, 255], outline_width=0)
+
+lyr_night_stations = map_obj.listLayers("Other Night Tube Stations")[0]
+set_polygon_symbology(lyr_night_stations, [150, 50, 50, 255], [0, 0, 0, 255], outline_width=0)
+
+########################################################################
+
 # now make a heatmap for change in thefts and robberies around London after vs before treatment
 
 # load in the excel data created in data_visualisation.r
