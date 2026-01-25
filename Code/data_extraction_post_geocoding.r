@@ -202,6 +202,25 @@ location_info <- location_info %>%
   left_join(min_nt_dist_victoria, by = "location") %>%
   left_join(min_nt_dist_northern, by = "location")
 
+
+# finally, get the distance to the nearest red station line
+
+red_stations <- c("Camden Town", "London Bridge", "North Greenwich", "Vauxhall", "Brixton", "Waterloo", "Oxford Circus", "Leicester Square", "Piccadilly Circus", "Charing Cross", "Victoria", "Hammersmith", "Walthamstow Central", "Stratford")
+
+min_dist_red <- ls_pairs %>%
+  filter(NAME %in% red_stations) %>%
+  group_by(location) %>%
+  filter(NEAR_DIST == min(NEAR_DIST, na.rm = TRUE)) %>%
+  ungroup() %>%
+  rename(min_red_dist = NEAR_DIST,
+         red_station = NAME) %>%
+  select(location, min_red_dist, red_station)
+
+# merge this in as well
+location_info <- location_info %>%
+  left_join(min_dist_red, by = "location")
+
+
 ###############################################################
 
 

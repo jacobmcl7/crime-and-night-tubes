@@ -466,6 +466,82 @@ p1 + p2 +
   title = 'TWFE results, disaggregated by area wealth',
   caption = 'Basic treatment definition, threshold = 1km')
 
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_wealth.png", width = 12, height = 6)
+
+
+#####################################################################
+
+# now disaggregate according to proximity to a red station
+
+# first create a dummy for being close to a red line station
+final_data <- final_data %>%
+  mutate(close_red = ifelse(!is.na(min_red_dist) & min_red_dist < 1 & first_treatment_1 < Inf, 1, 0))
+
+# now create event-time variables for those close to red stations and those not
+final_data <- final_data %>%
+  mutate(event_time_red = ifelse(close_red == 1, event_time_1, -1)) %>%
+  mutate(event_time_not_red = ifelse(close_red == 0 & first_treatment_1 < Inf, event_time_1, -1))
+
+# now these can be used in a regression
+TWFE_1km_disagg_theft <- feols(log_theft_from_the_person ~ i(event_time_red, ref = -1) + i(event_time_not_red, ref = -1) | location + Month, data = final_data, cluster = "location")
+
+# now prepare the coefficients for plotting
+coefs_red <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_red")
+coefs_not_red <- plot_prepare(TWFE_1km_disagg_theft, substring = "event_time_not_red")
+
+# plot them, side by side
+p1 <- plot(coefs = coefs_red, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "Close to Red Stations")
+p2 <- plot(coefs = coefs_not_red, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "Not Close to Red Stations")
+
+# now combine them into a grid
+p1 + p2 +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+  title = 'TWFE results, disaggregated by proximity to Red stations',
+  caption = 'Basic treatment definition, threshold = 1km, outcome = log(number of THEFTS)')
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_red_thefts.png", width = 12, height = 6)
+
+
+# same for robberies
+
+TWFE_1km_disagg_robbery <- feols(log_robbery ~ i(event_time_red, ref = -1) + i(event_time_not_red, ref = -1) | location + Month, data = final_data, cluster = "location")
+
+# now prepare the coefficients for plotting
+coefs_red <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_red")
+coefs_not_red <- plot_prepare(TWFE_1km_disagg_robbery, substring = "event_time_not_red")
+
+# plot them, side by side
+p1 <- plot(coefs = coefs_red, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "Close to Red Stations")
+p2 <- plot(coefs = coefs_not_red, 
+           xsequence = seq(-20, 15, 5),
+           ymin = -0.1,
+           ymax = 0.1,
+           title = "Not Close to Red Stations")
+
+# now combine them into a grid
+p1 + p2 +
+  plot_layout(ncol = 2) +
+  plot_annotation(
+  title = 'TWFE results, disaggregated by proximity to Red stations',
+  caption = 'Basic treatment definition, threshold = 1km, outcome = log(number of ROBBERIES)')
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_red_robberies.png", width = 12, height = 6)
 
 #####################################################################
 

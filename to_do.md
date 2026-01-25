@@ -2,6 +2,7 @@ to do list:
 
 next things to do:
  - get refreshed data in, with updated outcomes
+   - download each of the 36 archived folders, delete the irrelevant ones, then merge them all together on crime_id
  - think about how to demonstrate no substitution - use different control groups, and plot means? 
    - use regions within 1km of other stations, and separately use regions just between 1 and 2km of treated stations, then just look at whether the control regions go down or not
    - do placebo regressions - between 1-2km from night tube station on within 1km of non-nt stations, etc
