@@ -232,6 +232,10 @@ final_data <- final_data %>%
 
 
 
+# write this to a csv to be loaded into stata
+write.csv(final_data, "Crime and night tubes EXTRA DATA/final_data_for_stata.csv", row.names = FALSE)
+
+
 ############################################################
 # now do some analysis
 ############################################################
@@ -1161,7 +1165,7 @@ final_data_subset <- final_data %>%
 # time how long this takes
 start_time <- Sys.time()
 TWFE_BJS <- did_imputation(data = final_data_subset,
-            yname = "log_theft_from_person",
+            yname = "log_theft_from_the_person",
             gname = "first_treatment_1",
             # first_stage = ~ 0 | location + period,    (omit this - automatically just does FEs)
             tname = "period", 
@@ -1190,7 +1194,7 @@ ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
        y = "Coefficient on Event Time") +
   theme_minimal()
 
-# surely do the first step of this with ML methods?
+# surely do the first step of this with ML methods? - no: we assume we know the CEF, in which case OLS is optimal (surely not? it is BLUE but not BUE?)
 
 # "Error: std::bad_alloc"
 # I don't think we have the memory for this
