@@ -1,4 +1,45 @@
-# this file does the analysis
+########################################################
+# outline
+########################################################
+
+# this file does the main data analysis for the paper
+# the sequence of analysis is as follows:
+
+# 1) TWFE, 1km treatment, on total crime count (log(+1))
+#   1a) varied distances
+# 2) A+S (2021), 1km treatment, on total crime count
+#  2a) varied distances
+# 3) BJS (2024), 1km treatment, on total crime count
+# 4) TWFE with controls
+# 5) TWFE disaggregated by distance bands
+# 6) TWFE disaggregated by wealth of area
+# 7) TWFE disaggregated by proximity to a red line station
+# 8) TWFE for individual crime types - theft from the person
+#   8a) A+S for theft
+#   8b) TWFE disaggregation by distance bands
+#   8c) BJS (2024) for theft
+# 9) TWFE for individual crime types - robbery
+#   9a) A+S for robbery
+#   9b) TWFE disaggregation by distance bands
+#   9c) BJS (2024) for robbery
+# 10) TWFE for all crime types, plotted together
+#   10a) same but with A+S
+# 11) Poisson ETWFE regression for the main effect
+#   11a) same but for theft from the person
+#   11b) same but for robbery
+# 12) non-parametric estimation of distance-decay of ATT
+#   12a) same but split by six month periods
+#   12b) same but split by three month periods
+#   12c) now do it with the residuals from a Poisson regression
+# 13) BJS (2024) for the difference in evolution in rich vs poor areas
+#   13a) same but for burglary specifically
+
+
+
+
+########################################################
+# setup
+########################################################
 
 # import relevant packages
 library(fixest)
@@ -15,37 +56,6 @@ setwd("~/Economics/Papers (WIP)")
 # load in the data
 load("Crime and night tubes EXTRA DATA/final_data.RData")
 # load("Crime and night tubes EXTRA DATA/house_data_cleaned.RData")
-
-
-# ANALYSIS OVERVIEW
-# =================
-#
-# 1. FUNCTIONS
-#    - Define helper functions:
-#      * plot_prepare() & plot_prepare2(): Extract and format regression coefficients
-#      * plot(): Create event-study graphs with confidence intervals
-#      * define_treatment_event_time(): Assign treatment status based on distance thresholds
-#      * define_distance_bands(): Create distance band dummies for heterogeneity analysis
-#
-# 2. DATA PREPARATION
-#    - Define treatment (1km threshold) and event time variables
-#    - Create distance bands (0-0.25km, 0.25-0.5km, 0.5-0.75km, 0.75-1km)
-#    - Filter to locations within 2km of any station
-#
-# 3. MAIN ANALYSES
-#    a) Basic TWFE regressions (total crimes & house prices)
-#    b) Sun & Abraham (2021) estimator (total crimes & house prices)
-#    c) Distance heterogeneity (4 distance bands in 2x2 grids)
-#    d) Crime-specific analyses
-#    e) Loop through all 14 crime types (TWFE & Sun-Abraham)
-#
-# 4. ROBUSTNESS CHECKS
-#    - Poisson regression models
-#    - Non-parametric kernel regression for distance decay
-#    - Borusyak et al. (2021) imputation estimator
-#
-# All results saved to: Crime and night tubes/Output/Results/
-# All figures saved to: Crime and night tubes/Output/Figures/
 
 
 ########################################################
@@ -198,6 +208,29 @@ define_distance_bands <- function(thresholds, distance, data) {
 # NEED TO CHECK THIS ONE ABOVE
 
 
+# finally, write a function that imports the csv results from estimation with Borusyak et al (2024) in Stata
+load_bjs_results <- function(filepath, string) {
+
+  # read the file in
+  read.csv(filepath) %>%
+
+    # remove the first row
+    slice(-1) %>%
+
+    # name the variables
+    setNames(c("event_time", "coef", "se")) %>%
+
+    # clean up the variables, using the string argument to remove prefixes for tau
+    mutate(
+      event_time = ifelse(grepl("^tau", event_time),
+                          as.numeric(sub(string, "", event_time)),
+                          -as.numeric(sub("pre", "", event_time))),
+      coef = as.numeric(coef),
+      se = as.numeric(se)
+    )
+}
+
+
 ############################################################
 # prepare the data for analysis
 ############################################################
@@ -236,16 +269,27 @@ final_data <- final_data %>%
 # write.csv(final_data, "Crime and night tubes EXTRA DATA/final_data_for_stata.csv", row.names = FALSE)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 ############################################################
 # now do some analysis
 ############################################################
 
 
-# start with a simple dynamic TWFE regression
+# 1) TWFE event study regression, 1km treatment, on total crime count
 
-# now do the regression, saving it to then be plotted
+# do the regression, saving it to then be plotted
 TWFE_1km <- feols(log_num_crimes ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
-
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km, substring = "event_time_1")
@@ -261,11 +305,10 @@ plot(coefs = coefs,
 # save it
 ggsave("Crime and night tubes/Output/Results/TWFE_1km.png", width = 8, height = 6)
 
-
-
 ####################################################################
 
-# now do it again for different distances
+# 1a) now do it again for different distances
+
 for (dist in c(0.5, 0.75, 1.25)) {
 
   event_time_var <- paste0("event_time_", dist)
@@ -288,37 +331,24 @@ for (dist in c(0.5, 0.75, 1.25)) {
 }
 
 
-####################################################################
 
-# same for house prices
-
-# TWFE_1km_house <- feols(log_price ~ i(event_time_1, ref = -1) | pcsect + month, data = house_data, cluster = "pcsect")
-
-# # prepare the coefficients for plotting
-# coefs <- plot_prepare(TWFE_1km_house, substring = "event_time_1")
-
-# # plot the graph
-# plot(coefs = coefs, 
-#     xsequence = seq(-20, 15, 5), 
-#     ymin = -0.15,
-#     ymax = 0.15,
-#     title = "Dynamic TWFE results - House Prices", 
-#     note = "Simple treatment definition, theshold = 1km")
 
 
 
 
 ####################################################################
 
-# now use Abraham and Sun (2021) method
+# 2) now use Abraham and Sun (2021) method to do the above
 
-# same as before, but we use the sunab command in fixest
+# this works the same as before, but we use the sunab command in fixest
 # note that our cohort variable is first_treatment_1, and the large value of this variable for never treated units is what the command wants
 
+# do the regression
 sunab_1km <- feols(log_num_crimes ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 
 # prepare for plotting
 coefs <- plot_prepare2(sunab_1km, omitted_pd = -1)
+
 # plot the graph
 plot(coefs = coefs, 
     xsequence = seq(-20, 15, 5), 
@@ -330,10 +360,10 @@ plot(coefs = coefs,
 # save it
 ggsave("Crime and night tubes/Output/Results/Sunab_1km.png", width = 8, height = 6)
 
-
 ####################################################################
 
-# do it again for treatment defined at different distances
+# 2a) do it again for treatment defined at different distances, like above
+
 for (dist in c(0.5, 0.75, 1.25)) {
 
   first_treatment_var <- paste0("first_treatment_", dist)
@@ -357,9 +387,28 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
 
 
+
 ####################################################################
 
-# now do it with some controls
+# 3) now do it with the Borusyak, Jaravel and Spiess (2024) estimator
+
+# load in the results from csv
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_all.csv", "tau")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - All Crimes", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8, height = 6)
+
+####################################################################
+
+# 4) now do regression 1) with some extra controls
 
 # allow the effect of being close to a station, and the wealth of the region, to vary by month
 
@@ -378,9 +427,15 @@ plot(coefs = coefs,
 
 # note: adding time x region controls seems to restrict variation too much, leading to lost significance
 
+
+
+
+
 ####################################################################
 
-# disaggregate the results by distance: interact each of the event time dummies with a distance variable
+# 5) now disaggregate the results from 1) by distance
+
+# to do this, interact each of the event time dummies with a distance variable
 
 # now these can be used in a regression
 TWFE_1km_disagg <- feols(log_num_crimes ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
@@ -426,9 +481,15 @@ p1 + p2 + p3 + p4 +
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg.png", width = 12, height = 8)
 
 
+
+
+
+
+
+
 #####################################################################
 
-# disaggregate by wealth of the region
+# 6) disaggregate the effect from 1) by wealth of the region
 
 # first use the IMD to create a high/low wealth dummy for all observations for which first_treatment_1 < Inf
 # do this so the median is only calculated over treated locations
@@ -474,9 +535,14 @@ p1 + p2 +
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_wealth.png", width = 12, height = 6)
 
 
+
+
+
+
+
 #####################################################################
 
-# now disaggregate according to proximity to a red station
+# 7) now disaggregate the results from 1) according to proximity to a red station
 
 # first create a dummy for being close to a red line station
 final_data <- final_data %>%
@@ -517,7 +583,11 @@ p1 + p2 +
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_red_thefts.png", width = 12, height = 6)
 
 
-# same for robberies
+#####################################################################
+
+# 7a) do the same for robberies specifically 
+
+# ADD TO THE CONTENTS, OR DELETE
 
 TWFE_1km_disagg_robbery <- feols(log_robbery ~ i(event_time_red, ref = -1) + i(event_time_not_red, ref = -1) | location + Month, data = final_data, cluster = "location")
 
@@ -547,24 +617,20 @@ p1 + p2 +
 # save it
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_red_robberies.png", width = 12, height = 6)
 
-#####################################################################
 
-# try to do these with A+S
 
-# sunab_1km_disagg <- feols(log_num_crimes ~ sunab(first_treatment, period) : i(dist_band) | location + Month, data = final_data)
 
-# work out how to do this!
+
 
 
 #####################################################################
 
-# now do the above analysis for individual crimes
+# 8) now do the analysis for individual crime types - first theft from the person
 
-# first for theft from the person, starting with the basic TWFE regression
+# start with the basic TWFE regression
 
 # do the regression, saving it to then be plotted
 TWFE_1km_theft <- feols(log_theft_from_the_person ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
-
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_theft, substring = "event_time_1")
@@ -583,7 +649,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft.png", width = 8, hei
 
 ##########################################################
 
-# now with A+S
+# 8a) now do it with A+S, as in 2)
 
 # same as before, but we use the sunab command in fixest
 sunab_1km_theft <- feols(log_theft_from_the_person ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
@@ -601,7 +667,7 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_theft.png", width = 8, he
 
 ##########################################################
 
-# now do it with varying distance thresholds, again as before
+# 8b) now do it with varying distance thresholds, as in 5)
 
 # run the regression
 TWFE_1km_disagg_theft <- feols(log_theft_from_the_person ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
@@ -648,7 +714,32 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_theft.png", width =
 
 ####################################################################
 
-# now do it for robbery
+# 8c) now do it with BJS (2024)
+
+# load in the results from csv
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_theft.csv", "tau")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - Theft from the Person", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_theft.png", width = 8, height = 6)
+
+
+
+
+
+
+
+
+####################################################################
+
+# 9) now do it for robbery - first TWFE
 
 # do the regression, saving it to then be plotted
 TWFE_1km_robbery <- feols(log_robbery ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
@@ -669,7 +760,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_robbery.png", width = 8, h
 
 ####################################################################
 
-# now with A+S
+# 9a) now with A+S
 
 sunab_1km_robbery <- feols(log_robbery ~ sunab(first_treatment_1, period) | location + Month, data = final_data, cluster = "location")
 
@@ -689,7 +780,7 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_robbery.png", width = 8, 
 
 ####################################################################
 
-# now do it with varied distance thresholds
+# 9b) now do it with varied distance thresholds
 
 # run the regression
 TWFE_1km_disagg_robbery <- feols(log_robbery ~ i(event_time_dist_0_0.25, ref = -1) + i(event_time_dist_0.25_0.5, ref = -1) + i(event_time_dist_0.5_0.75, ref = -1) + i(event_time_dist_0.75_1, ref = -1) | location + Month, data = final_data, cluster = "location")
@@ -736,7 +827,35 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_disagg_robbery.png", width
 
 ####################################################################
 
-# now do it with all crimes, in a loop, then plotting them all together
+# 9c) now do it with BJS (2024)
+
+# load in the results from csv
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_robbery.csv", "tau")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - Robbery", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_robbery.png", width = 8, height = 6)
+
+
+
+
+
+
+
+
+
+
+
+####################################################################
+
+# 10) now do the TWFE regression from 1) for all crimes separately, then plot them all together
 
 crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
  "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
@@ -764,9 +883,6 @@ for (crime in crime_types) {
   # now print the plot in the loop
   print(get(paste0("plot_", crime)))
   
-  # save it
-  # ggsave(paste0("Crime and night tubes/Output/Results/loop_TWFE_1km_", crime, ".png"), width = 8, height = 6)
-
   # print a message to indicate completion
   print(paste0("Done for ", crime))
   
@@ -779,13 +895,13 @@ for (crime in crime_types) {
  plot_theft_from_the_person + plot_robbery) +
   plot_layout(ncol = 5)
 
-# save this too
+# save this
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid.png", width = 22, height = 12)
 
 
 ####################################################################
 
-# do this with A+S too, again in a loop
+# 10a) do this with A+S too instead of TWFE
 
 for (crime in crime_types) {
   
@@ -828,9 +944,17 @@ for (crime in crime_types) {
 ggsave("Crime and night tubes/Output/Results/Sunab_1km_crimes_grid.png", width = 22, height = 12)
 
 
+
+
+
+
+
+
 ####################################################################
 
-# do a Poisson regression as a robustness check, using the etwfe package (from Wooldridge, 2023)
+# 11) estimate the effect with a Poisson regression
+
+# to do this, we use the etwfe package (from Wooldridge, 2023)
 
 # we must regress on a set of saturated controls, as implicitly done here
 TWFE_1km_poisson <- etwfe(
@@ -865,7 +989,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson.png", width = 8, h
 
 ####################################################################
 
-# do it for thefts specifically
+# 11a) do it for thefts specifically
 
 # do the regression, saving it to then be plotted
 TWFE_1km_poisson_theft <- etwfe(
@@ -898,7 +1022,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_theft.png", width 
 
 ####################################################################
 
-# do it for robberies too
+# 11b) do it for robberies too
 
 # do the regression, saving it to then be plotted
 TWFE_1km_poisson_robbery <- etwfe(
@@ -929,9 +1053,17 @@ plot(coefs = coefs,
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", width = 8, height = 6)
 
 
+
+
+
+
+
+
 ####################################################################
 
-# non-parametric approach to distance decay: use kernel regression
+# 12) estimate the treatment effect decay with distance non-parametrically for thefts
+
+# NOTE: need to add robberies!!!!
 
 # first collect the residuals from a basic regression on fixed effects, without event time dummies
 TWFE_1km_theft <- feols(log_theft_from_the_person ~ 0 | location + Month, data = final_data)
@@ -998,7 +1130,9 @@ ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_all.png", width = 8, height = 6)
 
 
+####################################################################
 
+# 12a) now do the kernel regression by event time periods, first in six month periods
 
 # now loop over six month periods from 0-5 to 12-17, doing a kernel regression for each and saving the predictions
 for (t in seq(0, 15, by = 6)) {
@@ -1036,9 +1170,9 @@ ggplot() +
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_6_months.png", width = 8, height = 6)
 
+####################################################################
 
-
-
+# 12b) now the same, but at three month periods
 
 # now do the same thing but in three month periods
 for (t in seq(0, 15, by = 3)) {
@@ -1085,7 +1219,11 @@ ggplot() +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", width = 8, height = 6)
 
 
+#####################################################################
 
+# 12c) now do it with the residuals from a Poisson regression
+
+# NEEDS FIXING!!!
 
 # now do it with residuals from a Poisson regression
 
@@ -1141,75 +1279,13 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_poisson.png", width = 
 
 
 
+
+
 ####################################################################
 
-# now use Borusyak et al imputation-based estimator
+# 13) now use BJS (2024) to do a comparison of the ATT across rich vs poor areas - first for all crimes 
 
-# I do this by running it in Stata, where the package works slightly better, then plotting in R
-
-# first write a function that imports the csv results from Stata
-load_bjs_results <- function(filepath, string) {
-  # read the file in
-  read.csv(filepath) %>%
-    # remove the first row
-    slice(-1) %>%
-    # name the variables
-    setNames(c("event_time", "coef", "se")) %>%
-    # clean up the variables, using the string argument to remove prefixes for tau
-    mutate(
-      event_time = ifelse(grepl("^tau", event_time),
-                          as.numeric(sub(string, "", event_time)),
-                          -as.numeric(sub("pre", "", event_time))),
-      coef = as.numeric(coef),
-      se = as.numeric(se)
-    )
-}
-
-# first the main result, at 1km and for all crimes
-
-# load in the data from csv
-coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_all.csv", "tau")
-
-# plot the results
-plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
-    ymin = -0.05,
-    ymax = 0.05,
-    title = "BJS (2024) - All Crimes", 
-    note = "Simple treatment definition, theshold = 1km")
-
-# save the graph
-ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8, height = 6)
-
-# now for thefts
-coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_theft.csv", "tau")
-
-# plot the results
-plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
-    ymin = -0.05,
-    ymax = 0.05,
-    title = "BJS (2024) - Theft from the Person", 
-    note = "Simple treatment definition, theshold = 1km")
-
-# save the graph
-ggsave("Crime and night tubes/Output/Results/BJS_1km_theft.png", width = 8, height = 6)
-
-# now for robberies
-coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_robbery.csv", "tau")
-
-# plot the results
-plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
-    ymin = -0.05,
-    ymax = 0.05,
-    title = "BJS (2024) - Robbery", 
-    note = "Simple treatment definition, theshold = 1km")
-
-# save the graph
-ggsave("Crime and night tubes/Output/Results/BJS_1km_robbery.png", width = 8, height = 6)
-
-# now do the comparison across rich vs poor areas - first for all crimes
+# load in the data
 coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_all.csv", "tau_W")
 
 # plot the results
@@ -1223,7 +1299,11 @@ plot(coefs = coefs,
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_all.png", width = 8, height = 6)
 
-# now for burglary specifically
+####################################################################
+
+# 13a) now for burglary specifically
+
+# load in the data
 coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_burglary.csv", "tau_W")
 
 # plot the results
@@ -1240,97 +1320,5 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_burglary.png", 
 
 
 
-
-# CODE FOR R
-
-# # make the appropriate edits to the first_treated variable for this to work
-
-# final_data <- final_data %>%
-#   mutate(first_treatment_1 = ifelse(first_treatment_1 > 100, NA, first_treatment_1))
-
-
-# # filter the data to include only observations from a random subset of locations
-# set.seed(123)
-# final_data_subset <- final_data %>%
-#   filter(location %in% sample(unique(location), 5000))
-
-# # we need the following variables:
-# # outcome (yname)
-# # cohort/unit-specific date of treatment (gname) - must be 0 or NA for never treated units
-# # calendar period (tname)
-# # unit identifier (idname)
-
-# # time how long this takes
-# start_time <- Sys.time()
-# TWFE_BJS <- did_imputation(data = final_data_subset,
-#             yname = "log_theft_from_the_person",
-#             gname = "first_treatment_1",
-#             # first_stage = ~ 0 | location + period,    (omit this - automatically just does FEs)
-#             tname = "period", 
-#             idname = "location",
-#             horizon = TRUE,
-#             pretrends = -20:-1)
-# end_time <- Sys.time()
-# end_time - start_time
-
-# # including all pretrends gives huge standard errors - why is this?
-# # we also get std::bad_alloc error when going up to 10000 locations
-
-# # plot the results
-# TWFE_BJS <- as.data.frame(TWFE_BJS) %>%
-#   mutate(term = as.numeric(term))
-
-# ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
-#   geom_line() +
-#   geom_point() +
-#   geom_ribbon(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), 
-#               alpha = 0.1, fill = "blue", color = scales::alpha("blue", 0.3)) +
-#   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-#   geom_vline(xintercept = -0.5, linetype = "dashed", color = "black") +
-#   labs(title = "Borusyak, Jaravel, and Spiess (2021) Imputation Estimator Results",
-#        x = "Event Time (Months Since Treatment)",
-#        y = "Coefficient on Event Time") +
-#   theme_minimal()
-
-# # surely do the first step of this with ML methods? - no: we assume we know the CEF, in which case OLS is optimal (surely not? it is BLUE but not BUE?)
-
-# # "Error: std::bad_alloc"
-# # I don't think we have the memory for this
-
-# # maybe use RStata package and run it through Stata?
-
-
-
-
-
-
-
 ################################################################################################
 ################################################################################################
-
-
-
-
-
-
-####################################################################
-####################################################################
-# notes
-####################################################################
-####################################################################
-
-
-# notes:
-
-# should be using log crime count, as the distribution is heavily right skewed:
-# to see this, plot num_crimes and log(1 + num_crimes)
-#ggplot(final_data, aes(x = num_crimes)) + geom_histogram(binwidth = 1) + xlim(-1, 50)
-#ggplot(final_data, aes(x = log(1 + num_crimes))) + geom_histogram(binwidth = 0.1) + xlim(-1, 5)
-
-# get controls in:
-# - region x time (can't do unit x time as this would be collinear with treatment)
-# - properties of the station/region (interacted with time)
-
-# we want to do the proper event study regression using new literature
-
-# do a TWFE regression with inverse proximity weighting as our treatment, or other treatments, for robustness
