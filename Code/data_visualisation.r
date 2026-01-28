@@ -758,11 +758,13 @@ write.xlsx(theft_robbery_summary, "Crime and night tubes EXTRA DATA/theft_robber
 police_response_data <- final_data %>%
   filter(min_any_dist < 0.25) %>%
   mutate(thefts_robberies = theft_from_the_person + robbery,
-         outcome_yes_thefts_robberies = outcome_yes_theft_from_the_person + outcome_yes_robbery) %>%
+         outcome_yes_thefts_robberies = outcome_yes_theft_from_the_person + outcome_yes_robbery,
+         outcome_done_thefts_robberies = outcome_no_theft_from_the_person + outcome_no_robbery + outcome_yes_thefts_robberies) %>%
   group_by(closest_station, period) %>%
   summarise(
     total_thefts_robberies = sum(thefts_robberies, na.rm = TRUE),
-    solved_thefts_robberies = sum(outcome_yes_thefts_robberies, na.rm = TRUE)
+    solved_thefts_robberies = sum(outcome_yes_thefts_robberies, na.rm = TRUE),
+    done_thefts_robberies = sum(outcome_done_thefts_robberies, na.rm = TRUE)
   ) %>%
   ungroup()
 
@@ -777,27 +779,37 @@ police_response_data <- police_response_data %>%
   group_by(period) %>%
   summarise(
     total_thefts_robberies = sum(total_thefts_robberies, na.rm = TRUE),
-    solved_thefts_robberies = sum(solved_thefts_robberies, na.rm = TRUE)
+    solved_thefts_robberies = sum(solved_thefts_robberies, na.rm = TRUE),
+    done_thefts_robberies = sum(done_thefts_robberies, na.rm = TRUE)
   ) %>%
   ungroup()
 
 # plot the number of total and solved thefts and robberies over time for each station
 ggplot(police_response_data) +
   geom_line(aes(x = period, y = total_thefts_robberies, color = "blue"), size = 1) +
-  labs(title = "Police Solve Rate and Total Thefts and Robberies Over Time by Station",
+  labs(title = "Total Thefts and Robberies Over Time by Station",
        x = "Period") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
 ggplot(police_response_data) +
   geom_line(aes(x = period, y = solved_thefts_robberies, color = "red"), size = 1) +
-  labs(title = "Police Solve Rate and Total Thefts and Robberies Over Time by Station",
+  labs(title = "Proportion Solved Over Time by Station",
+       x = "Period") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+ggplot(police_response_data) +
+  geom_line(aes(x = period, y = solved_thefts_robberies/done_thefts_robberies, color = "red"), size = 1) +
+  labs(title = "Proportion Solved Over Time by Station, of those with an outcome",
        x = "Period") +
   theme_minimal() +
   theme(legend.position = "bottom")
 
 
-# plot the solve rate over time in the whole sample for the total crime count
+
+# now plot the solve rate over time in the whole sample for the total crime count
+
 police_response_data <- final_data %>%
   group_by(period) %>%
   summarise(
