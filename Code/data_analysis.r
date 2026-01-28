@@ -281,6 +281,12 @@ final_data <- final_data %>%
 
 
 
+
+
+
+
+
+
 ############################################################
 # now do some analysis
 ############################################################
@@ -1061,14 +1067,28 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", widt
 
 ####################################################################
 
-# 12) estimate the treatment effect decay with distance non-parametrically for thefts
+# 12) estimate the treatment effect decay with distance non-parametrically for thefts and robberies
 
 # NOTE: need to add robberies!!!!
 
-# first collect the residuals from a basic regression on fixed effects, without event time dummies
-TWFE_1km_theft <- feols(log_theft_from_the_person ~ 0 | location + Month, data = final_data)
+# first collect the residuals from a basic regression on fixed effects, without event time dummies, on the untreated units
+# this is just first stage of BJS (2024)
+
+# get the data ready
 final_data <- final_data %>%
-  mutate(residuals = resid(TWFE_1km_theft))
+  mutate(log_theft_robbery = log(theft_from_the_person + robbery + 1)) # add 1 to avoid log(0)
+
+BJS_data <- final_data %>%
+  filter(first_treatment_1 == Inf) %>%
+  select(location, Month, log_theft_robbery)
+
+# do the regression
+TWFE_1km_theft_robbery <- feols(log_theft_robbery ~ 0 | location + Month, data = final_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_1km_theft_robbery, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_theft_robbery - fitted_vals)
 
 # now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
 
@@ -1093,7 +1113,7 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
   theme_minimal()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_all.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png", width = 8, height = 6)
 
 
 # alternative method - use the mgcv package to fit a generalised additive model (GAM)
@@ -1127,7 +1147,7 @@ ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
   theme_minimal()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_all.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery.png", width = 8, height = 6)
 
 
 ####################################################################
@@ -1223,28 +1243,27 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", widt
 
 # 12c) now do it with the residuals from a Poisson regression
 
-# NEEDS FIXING!!!
+# THIS DOESN'T WORK - FIX IT!!!
 
-# now do it with residuals from a Poisson regression
-
-# do the regression
-TWFE_1km_theft_poisson <- etwfe(
-  fml = theft_from_the_person ~ 1,
-  tvar = period,
-  gvar = first_treatment_1,
-  data = final_data,
-  vcov = ~location, 
-  family = "poisson",
-  cgroup = "never"
-)
-
-# get the residuals
+# get the outcome variable ready
 final_data <- final_data %>%
-  mutate(residuals_poisson = resid(TWFE_1km_theft_poisson))
+  mutate(theft_robbery = theft_from_the_person + robbery)
+
+# subset the data to untreated units
+first_stage_data <- final_data %>%
+  filter(first_treatment_1 == Inf) %>%
+  select(location, Month, theft_robbery)
+
+# do the Poisson regression
+first_stage_Poisson <- feglm(theft_robbery ~ 1 | location + Month, data = first_stage_data, family = poisson)
 
 # subset the data to include only post-treatment observations
 data_subset <- final_data %>%
   filter(event_time_1 >= 0)
+
+# get the residuals
+data_subset$fitted_poisson = fitted(first_stage_Poisson, newdata = data_subset)
+data_subset$residuals_poisson = data_subset$theft_robbery - data_subset$fitted_poisson
 
 # fit a GAM using bam()
 model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
