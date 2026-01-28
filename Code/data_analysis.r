@@ -233,7 +233,7 @@ final_data <- final_data %>%
 
 
 # write this to a csv to be loaded into stata
-write.csv(final_data, "Crime and night tubes EXTRA DATA/final_data_for_stata.csv", row.names = FALSE)
+# write.csv(final_data, "Crime and night tubes EXTRA DATA/final_data_for_stata.csv", row.names = FALSE)
 
 
 ############################################################
@@ -1145,61 +1145,159 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_poisson.png", width = 
 
 # now use Borusyak et al imputation-based estimator
 
-# make the appropriate edits to the first_treated variable for this to work
+# I do this by running it in Stata, where the package works slightly better, then plotting in R
 
-final_data <- final_data %>%
-  mutate(first_treatment_1 = ifelse(first_treatment_1 > 100, NA, first_treatment_1))
+# first write a function that imports the csv results from Stata
+load_bjs_results <- function(filepath, string) {
+  # read the file in
+  read.csv(filepath) %>%
+    # remove the first row
+    slice(-1) %>%
+    # name the variables
+    setNames(c("event_time", "coef", "se")) %>%
+    # clean up the variables, using the string argument to remove prefixes for tau
+    mutate(
+      event_time = ifelse(grepl("^tau", event_time),
+                          as.numeric(sub(string, "", event_time)),
+                          -as.numeric(sub("pre", "", event_time))),
+      coef = as.numeric(coef),
+      se = as.numeric(se)
+    )
+}
 
+# first the main result, at 1km and for all crimes
 
-# filter the data to include only observations from a random subset of locations
-set.seed(123)
-final_data_subset <- final_data %>%
-  filter(location %in% sample(unique(location), 5000))
-
-# we need the following variables:
-# outcome (yname)
-# cohort/unit-specific date of treatment (gname) - must be 0 or NA for never treated units
-# calendar period (tname)
-# unit identifier (idname)
-
-# time how long this takes
-start_time <- Sys.time()
-TWFE_BJS <- did_imputation(data = final_data_subset,
-            yname = "log_theft_from_the_person",
-            gname = "first_treatment_1",
-            # first_stage = ~ 0 | location + period,    (omit this - automatically just does FEs)
-            tname = "period", 
-            idname = "location",
-            horizon = TRUE,
-            pretrends = -20:-1)
-end_time <- Sys.time()
-end_time - start_time
-
-# including all pretrends gives huge standard errors - why is this?
-# we also get std::bad_alloc error when going up to 10000 locations
+# load in the data from csv
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_all.csv", "tau")
 
 # plot the results
-TWFE_BJS <- as.data.frame(TWFE_BJS) %>%
-  mutate(term = as.numeric(term))
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - All Crimes", 
+    note = "Simple treatment definition, theshold = 1km")
 
-ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
-  geom_line() +
-  geom_point() +
-  geom_ribbon(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), 
-              alpha = 0.1, fill = "blue", color = scales::alpha("blue", 0.3)) +
-  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  geom_vline(xintercept = -0.5, linetype = "dashed", color = "black") +
-  labs(title = "Borusyak, Jaravel, and Spiess (2021) Imputation Estimator Results",
-       x = "Event Time (Months Since Treatment)",
-       y = "Coefficient on Event Time") +
-  theme_minimal()
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8, height = 6)
 
-# surely do the first step of this with ML methods? - no: we assume we know the CEF, in which case OLS is optimal (surely not? it is BLUE but not BUE?)
+# now for thefts
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_theft.csv", "tau")
 
-# "Error: std::bad_alloc"
-# I don't think we have the memory for this
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - Theft from the Person", 
+    note = "Simple treatment definition, theshold = 1km")
 
-# maybe use RStata package and run it through Stata?
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_theft.png", width = 8, height = 6)
+
+# now for robberies
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_robbery.csv", "tau")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - Robbery", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_robbery.png", width = 8, height = 6)
+
+# now do the comparison across rich vs poor areas - first for all crimes
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_all.csv", "tau_W")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "BJS (2024) - tau_rich - tau_poor - All Crimes", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_all.png", width = 8, height = 6)
+
+# now for burglary specifically
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_burglary.csv", "tau_W")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-10, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "BJS (2024) - tau_rich - tau_poor - Burglary", 
+    note = "Simple treatment definition, theshold = 1km")
+
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_burglary.png", width = 8, height = 6)
+
+
+
+
+# CODE FOR R
+
+# # make the appropriate edits to the first_treated variable for this to work
+
+# final_data <- final_data %>%
+#   mutate(first_treatment_1 = ifelse(first_treatment_1 > 100, NA, first_treatment_1))
+
+
+# # filter the data to include only observations from a random subset of locations
+# set.seed(123)
+# final_data_subset <- final_data %>%
+#   filter(location %in% sample(unique(location), 5000))
+
+# # we need the following variables:
+# # outcome (yname)
+# # cohort/unit-specific date of treatment (gname) - must be 0 or NA for never treated units
+# # calendar period (tname)
+# # unit identifier (idname)
+
+# # time how long this takes
+# start_time <- Sys.time()
+# TWFE_BJS <- did_imputation(data = final_data_subset,
+#             yname = "log_theft_from_the_person",
+#             gname = "first_treatment_1",
+#             # first_stage = ~ 0 | location + period,    (omit this - automatically just does FEs)
+#             tname = "period", 
+#             idname = "location",
+#             horizon = TRUE,
+#             pretrends = -20:-1)
+# end_time <- Sys.time()
+# end_time - start_time
+
+# # including all pretrends gives huge standard errors - why is this?
+# # we also get std::bad_alloc error when going up to 10000 locations
+
+# # plot the results
+# TWFE_BJS <- as.data.frame(TWFE_BJS) %>%
+#   mutate(term = as.numeric(term))
+
+# ggplot(TWFE_BJS, aes(x = term, y = estimate)) +
+#   geom_line() +
+#   geom_point() +
+#   geom_ribbon(aes(ymin = estimate - 1.96 * std.error, ymax = estimate + 1.96 * std.error), 
+#               alpha = 0.1, fill = "blue", color = scales::alpha("blue", 0.3)) +
+#   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+#   geom_vline(xintercept = -0.5, linetype = "dashed", color = "black") +
+#   labs(title = "Borusyak, Jaravel, and Spiess (2021) Imputation Estimator Results",
+#        x = "Event Time (Months Since Treatment)",
+#        y = "Coefficient on Event Time") +
+#   theme_minimal()
+
+# # surely do the first step of this with ML methods? - no: we assume we know the CEF, in which case OLS is optimal (surely not? it is BLUE but not BUE?)
+
+# # "Error: std::bad_alloc"
+# # I don't think we have the memory for this
+
+# # maybe use RStata package and run it through Stata?
 
 
 
