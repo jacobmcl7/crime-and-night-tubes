@@ -765,7 +765,7 @@ for (crime in crime_types) {
   print(get(paste0("plot_", crime)))
   
   # save it
-  ggsave(paste0("Crime and night tubes/Output/Results/loop_TWFE_1km_", crime, ".png"), width = 8, height = 6)
+  # ggsave(paste0("Crime and night tubes/Output/Results/loop_TWFE_1km_", crime, ".png"), width = 8, height = 6)
 
   # print a message to indicate completion
   print(paste0("Done for ", crime))
@@ -810,7 +810,7 @@ for (crime in crime_types) {
   print(get(paste0("plot_", crime)))
   
   # save it
-  ggsave(paste0("Crime and night tubes/Output/Results/loop_Sunab_1km_", crime, ".png"), width = 8, height = 6)
+  # ggsave(paste0("Crime and night tubes/Output/Results/loop_Sunab_1km_", crime, ".png"), width = 8, height = 6)
 
   # print a message to indicate completion
   print(paste0("Done for ", crime))
