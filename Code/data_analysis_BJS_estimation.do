@@ -85,3 +85,31 @@ did_imputation log_burglary location period first_treatment_1, pre(10) wtr(W0 W1
 
 *then save the coefficient vector
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_burglary.csv", cells("b se") plain replace noobs
+
+
+*6) loop over all other crime types and do the BJS estimation for each - first the basic one
+
+local crime_list "log_violence_and_sexual_offences log_vehicle_crime log_other_theft log_burglary log_anti-social_behaviour log_shoplifting log_criminal_damage_and_arson log_other_crime log_possession_of_weapons log_bicycle_theft log_drugs log_public_order log_theft_from_the_person log_robbery"
+
+*do the regressions in a loop for each crime type
+foreach crime of local crime_list {
+    di "Doing BJS estimation for `crime'"
+    
+    *basic BJS estimation
+    did_imputation `crime' location period first_treatment_1, allhorizons pre(10)
+    
+    *save the coefficient vector and the SEs as a csv
+    esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_`crime'.csv", cells("b se") plain replace noobs
+}
+
+*7) now the wealth-differentiated one
+
+foreach crime of local crime_list {
+    di "Doing wealth-differentiated BJS estimation for `crime'"
+    
+    *wealth-differentiated BJS estimation
+    did_imputation `crime' location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
+    
+    *save the coefficient vector and the SEs as a csv
+    esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_`crime'.csv", cells("b se") plain replace noobs
+}
