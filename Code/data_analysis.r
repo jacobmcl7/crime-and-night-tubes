@@ -49,6 +49,8 @@ library(patchwork)
 library(didimputation)
 library(KernSmooth) # for kernel regression
 library(etwfe)
+library(mgcv)
+
 
 # set working directory
 setwd("~/Economics/Papers (WIP)")
@@ -1117,7 +1119,6 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png",
 
 
 # alternative method - use the mgcv package to fit a generalised additive model (GAM)
-library(mgcv)
 
 # Fit using bam() - optimized for large datasets
 model_gam <- bam(residuals ~ s(min_active_dist, k = 20),
@@ -1262,8 +1263,9 @@ data_subset <- final_data %>%
   filter(event_time_1 >= 0)
 
 # get the residuals
-data_subset$fitted_poisson = fitted(first_stage_Poisson, newdata = data_subset)
-data_subset$residuals_poisson = data_subset$theft_robbery - data_subset$fitted_poisson
+data_subset <- data_subset %>%
+  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = data_subset)) %>%
+  mutate(residuals_poisson = theft_robbery - fitted_poisson)
 
 # fit a GAM using bam()
 model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
