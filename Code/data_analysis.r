@@ -32,7 +32,7 @@
 #   12b) same but split by three month periods
 #   12c) now do it with the residuals from a Poisson regression
 # 13) BJS (2024) for the difference in evolution in rich vs poor areas
-#   13a) same but for burglary specifically
+#   13a) same but for all crimes separately
 
 
 
@@ -1322,23 +1322,37 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_all.png", width
 
 ####################################################################
 
-# 13a) now for burglary specifically
+# 13a) now for each crime individually, in a loop
 
-# load in the data
-coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_burglary.csv", "tau_W")
+# GET ANTI SOCIAL BEHAVIOUR IN TOO!!!
 
-# plot the results
-plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
-    ymin = -0.1,
-    ymax = 0.1,
-    title = "BJS (2024) - tau_rich - tau_poor - Burglary", 
-    note = "Simple treatment definition, theshold = 1km")
+# define the crime types
+crime_types <- c("burglary", "bicycle_theft", "violence_and_sexual_offences", "other_theft", "shoplifting", "theft_from_the_person", "robbery")
 
+for (crime in crime_types) {
 
-# save the graph
-ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_burglary.png", width = 8, height = 6)
+  # get the data in
+  coefs <- load_bjs_results(paste0("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_log_", crime, ".csv"), "tau_W")
 
+  # save a plot of the results
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
+      xsequence = seq(-10, 15, 5), 
+      ymin = -0.1,
+      ymax = 0.1,
+      title = paste0("BJS (2024) - tau_rich - tau_poor - ", gsub("_", " ", crime)), 
+      note = "Simple treatment definition, theshold = 1km"))
+
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+  
+}
+
+# now plot them all in one big grid
+(plot_burglary + plot_bicycle_theft + plot_violence_and_sexual_offences + plot_other_theft + plot_shoplifting + plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 4)
+
+# save this
+ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_grid.png", width = 22, height = 12)
 
 
 ################################################################################################

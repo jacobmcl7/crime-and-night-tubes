@@ -67,7 +67,7 @@ forvalues t = 0/16 {
     
     * Normalize
     qui replace W`t' = W`t' / `sum_high' if first_treatment_1 < . & W`t' == 1
-    qui replace W`t' = -W`t' / `sum_low' if first_treatment_1 < . & W`t' == -1
+    qui replace W`t' = W`t' / `sum_low' if first_treatment_1 < . & W`t' == -1
 }
 
 *now use them in the BJS estimation
