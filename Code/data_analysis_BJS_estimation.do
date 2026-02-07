@@ -113,3 +113,25 @@ foreach crime of local crime_list {
     *save the coefficient vector and the SEs as a csv
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_`crime'.csv", cells("b se") plain replace noobs
 }
+
+
+
+*8) add a triple difference estimation, for robustness, using a 1km cutoff around treated and untreated stations
+
+*FIX THIS!! still can't impute anything
+
+*now split units observed in a period in two ways: 
+    *by whether they are within 1km of a station or not
+    *by what their nearest station is
+
+*make these variables
+gen within_1km = (min_any_dist <= 1)
+
+*convert station to numeric
+encode closest_station, gen(closest_station_n)
+
+*create interaction
+egen id = group(closest_station_n within_1km)
+
+*now do the regression
+did_imputation log_num_crimes id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10)
