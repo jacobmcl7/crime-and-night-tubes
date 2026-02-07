@@ -3,6 +3,7 @@ to do list:
 next things to do:
  - cluster BJS SEs!
  - do Conley SEs
+ - get the proof correct for consistency
  - get refreshed data in, with updated outcomes
    - download each of the 36 archived folders, delete the irrelevant ones, then merge them all together on crime_id
  - think about how to demonstrate no substitution - use different control groups, and plot means? 
