@@ -1244,38 +1244,36 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", widt
 
 # 12c) now do it with the residuals from a Poisson regression
 
-# THIS DOESN'T WORK - FIX IT!!!
-
 # get the outcome variable ready
 final_data <- final_data %>%
   mutate(theft_robbery = theft_from_the_person + robbery)
 
-# subset the data to untreated units
+# subset the data to untreated and not-yet-treated units
 first_stage_data <- final_data %>%
-  filter(first_treatment_1 == Inf) %>%
+  filter(first_treatment_1 == Inf | event_time_1 < 0) %>%
   select(location, Month, theft_robbery)
 
 # do the Poisson regression
 first_stage_Poisson <- feglm(theft_robbery ~ 1 | location + Month, data = first_stage_data, family = poisson)
 
 # subset the data to include only post-treatment observations
-data_subset <- final_data %>%
+second_stage_data <- final_data %>%
   filter(event_time_1 >= 0)
 
 # get the residuals
-data_subset <- data_subset %>%
-  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = data_subset)) %>%
+second_stage_data <- second_stage_data %>%
+  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = second_stage_data)) %>%
   mutate(residuals_poisson = theft_robbery - fitted_poisson)
 
 # fit a GAM using bam()
 model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
-                 data = data_subset,
+                 data = second_stage_data,
                  discrete = TRUE,  # major speed boost for large N
                  nthreads = 4)     # parallel processing
 
 # Create prediction grid with SEs
-pred_grid <- data.frame(min_active_dist = seq(min(data_subset$min_active_dist),
-                                               max(data_subset$min_active_dist),
+pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
+                                               max(second_stage_data$min_active_dist),
                                                length.out = 100))
 
 preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
