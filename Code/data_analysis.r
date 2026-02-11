@@ -118,7 +118,7 @@ plot <- function(coefs, xsequence, ymax, ymin, title, note = "") {
           x = "Event Time (Months Since Treatment)",
           y = "Coefficient on Event Time",
           caption = note) +
-    theme_minimal()
+    theme_bw()
 }
 
 
@@ -1108,10 +1108,10 @@ model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
 ggplot(model_kerns_all, aes(x = x, y = y)) +
   geom_line(color = "blue", size = 1.5) +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (All Post-Treatment)",
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png", width = 8, height = 6)
@@ -1141,10 +1141,10 @@ ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
   geom_line(color = "blue") +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance",
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery.png", width = 8, height = 6)
@@ -1176,7 +1176,7 @@ ggplot() +
   geom_line(data = model_kerns_6, aes(x = x, y = y, color = "6-11 months"), size = 1) +
   geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-17 months"), size = 1) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Treatment Effect Decay with Distance",
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
        x = "Distance from Station (km)",
        y = "Treatment Effect",
        color = "Event Time") +
@@ -1185,7 +1185,7 @@ ggplot() +
         "6-11 months" = "#29bdf3",
         "12-17 months" = "#00ffee"), 
         breaks = c("0-5 months", "6-11 months", "12-17 months")) +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_6_months.png", width = 8, height = 6)
@@ -1219,7 +1219,7 @@ ggplot() +
   geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-14 months"), size = 1) +
   geom_line(data = model_kerns_15, aes(x = x, y = y, color = "15-17 months"), size = 1) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Treatment Effect Decay with Distance",
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
        x = "Distance from Station (km)",
        y = "Treatment Effect",
        color = "Event Time") +
@@ -1233,7 +1233,7 @@ ggplot() +
       "15-17 months" = "#ccff00"
     ),
     breaks = c("0-2 months", "3-5 months", "6-8 months", "9-11 months", "12-14 months", "15-17 months")) +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", width = 8, height = 6)
@@ -1280,13 +1280,13 @@ model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
 ggplot(model_kerns_all, aes(x = x, y = y)) +
   geom_line(color = "blue", size = 1.5) +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (all crimes, Poisson residuals)",
+  labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_poisson.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_theft_robbery_poisson.png", width = 8, height = 6)
 
 
 
@@ -1312,13 +1312,13 @@ ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
   geom_line(color = "blue") +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance",
+  labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_poisson.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery_poisson.png", width = 8, height = 6)
 
 
 ####################################################################
@@ -1357,7 +1357,7 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
   labs(title = "Treatment Effect Decay with Distance (all crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total.png", width = 8, height = 6)
@@ -1403,7 +1403,7 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
   labs(title = "Treatment Effect Decay with Distance (all crimes, Poisson residuals)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
-  theme_minimal()
+  theme_bw()
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total_poisson.png", width = 8, height = 6)
