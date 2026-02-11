@@ -1071,21 +1071,20 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", widt
 
 # 12) estimate the treatment effect decay with distance non-parametrically for thefts and robberies
 
-# NOTE: need to add robberies!!!!
-
-# first collect the residuals from a basic regression on fixed effects, without event time dummies, on the untreated units
+# first collect the residuals from a basic regression on fixed effects, without event time dummies, on the not-yet-treated untreated units
 # this is just first stage of BJS (2024)
 
 # get the data ready
 final_data <- final_data %>%
   mutate(log_theft_robbery = log(theft_from_the_person + robbery + 1)) # add 1 to avoid log(0)
 
-BJS_data <- final_data %>%
-  filter(first_treatment_1 == Inf) %>%
+# collect not (yet) treated units
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
   select(location, Month, log_theft_robbery)
 
 # do the regression
-TWFE_1km_theft_robbery <- feols(log_theft_robbery ~ 0 | location + Month, data = final_data)
+TWFE_1km_theft_robbery <- feols(log_theft_robbery ~ 0 | location + Month, data = first_stage_data)
 
 # get fitted values and residuals for the whole data
 final_data$fitted_vals <- predict(TWFE_1km_theft_robbery, newdata = final_data)
@@ -1095,13 +1094,13 @@ final_data <- final_data %>%
 # now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
 
 # plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
-data_subset <- final_data %>%
+second_stage_data <- final_data %>%
   filter(event_time_1 >= 0)
 
 # do the kernel regression and save the results
-model_kerns_all <- as.data.frame(locpoly(x = data_subset$min_active_dist,
-                                 y = data_subset$residuals,
-                                 bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                 y = second_stage_data$residuals,
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
                                  degree = 1,  # i.e. local linear
                                  gridsize = 100))
 
@@ -1122,13 +1121,13 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png",
 
 # Fit using bam() - optimized for large datasets
 model_gam <- bam(residuals ~ s(min_active_dist, k = 20),
-                 data = data_subset,
+                 data = second_stage_data,
                  discrete = TRUE,  # major speed boost for large N
                  nthreads = 4)     # parallel processing
 
 # Create prediction grid with SEs
-pred_grid <- data.frame(min_active_dist = seq(min(data_subset$min_active_dist),
-                                               max(data_subset$min_active_dist),
+pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
+                                               max(second_stage_data$min_active_dist),
                                                length.out = 100))
 
 preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
@@ -1159,7 +1158,7 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery.png", wi
 for (t in seq(0, 15, by = 6)) {
   
   # subset the data to the relevant event times
-  data_subset <- final_data %>%
+  data_subset <- second_stage_data %>%
     filter(event_time_1 >= t & event_time_1 < (t + 6))
   
   # do the kernel regression and save the results
@@ -1250,7 +1249,7 @@ final_data <- final_data %>%
 
 # subset the data to untreated and not-yet-treated units
 first_stage_data <- final_data %>%
-  filter(first_treatment_1 == Inf | event_time_1 < 0) %>%
+  filter(event_time_1 < 0) %>%
   select(location, Month, theft_robbery)
 
 # do the Poisson regression
@@ -1265,7 +1264,33 @@ second_stage_data <- second_stage_data %>%
   mutate(fitted_poisson = predict(first_stage_Poisson, newdata = second_stage_data)) %>%
   mutate(residuals_poisson = theft_robbery - fitted_poisson)
 
-# fit a GAM using bam()
+# some are NA - why?? Because they didn't have a theft/robbery beforehand?
+# drop these
+second_stage_data <- second_stage_data %>%
+  filter(!is.na(residuals_poisson))
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                 y = second_stage_data$residuals_poisson,
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (all crimes, Poisson residuals)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_poisson.png", width = 8, height = 6)
+
+
+
+# now fit a GAM using bam()
 model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
                  data = second_stage_data,
                  discrete = TRUE,  # major speed boost for large N
@@ -1294,6 +1319,99 @@ ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
 
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_poisson.png", width = 8, height = 6)
+
+
+####################################################################
+
+# 12d) now do it with residuals from the total crime count
+
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, log_num_crimes)
+
+# do the regression
+TWFE_1km_total <- feols(log_num_crimes ~ 0 | location + Month, data = first_stage_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_1km_total, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_num_crimes - fitted_vals)
+
+# now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
+
+# plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
+second_stage_data <- final_data %>%
+  filter(event_time_1 >= 0)
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                 y = second_stage_data$residuals,
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (all crimes)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total.png", width = 8, height = 6)
+
+
+####################################################################
+
+# 12e) now do it with the residuals from a Poisson regression on total crime counts
+
+# subset the data to untreated and not-yet-treated units
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, num_crimes)
+
+# do the Poisson regression
+first_stage_Poisson <- feglm(num_crimes ~ 1 | location + Month, data = first_stage_data, family = poisson)
+
+# subset the data to include only post-treatment observations
+second_stage_data <- final_data %>%
+  filter(event_time_1 >= 0)
+
+# get the residuals
+second_stage_data <- second_stage_data %>%
+  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = second_stage_data)) %>%
+  mutate(residuals_poisson = num_crimes - fitted_poisson)
+
+# some are NA - why?? Because they didn't have a theft/robbery beforehand?
+# drop these
+second_stage_data <- second_stage_data %>%
+  filter(!is.na(residuals_poisson))
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                 y = second_stage_data$residuals_poisson,
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (all crimes, Poisson residuals)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_minimal()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total_poisson.png", width = 8, height = 6)
+
+
+
+
+
 
 
 
