@@ -1492,7 +1492,7 @@ for (crime in crime_types_bjs) {
       xsequence = seq(-10, 15, 5), 
       ymin = -0.1,
       ymax = 0.1,
-      title = paste0("BJS (2024), wealth difference", gsub("_", " ", crime)), 
+      title = paste0("BJS (2024), wealth difference, ", gsub("_", " ", crime)), 
       note = "Simple treatment definition, theshold = 1km"))
   
   # print a message to indicate completion
