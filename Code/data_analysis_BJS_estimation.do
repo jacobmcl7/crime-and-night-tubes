@@ -89,7 +89,7 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_bu
 
 *6) loop over all other crime types and do the BJS estimation for each - first the basic one
 
-local crime_list "log_violence_and_sexual_offences log_vehicle_crime log_other_theft log_burglary log_anti-social_behaviour log_shoplifting log_criminal_damage_and_arson log_other_crime log_possession_of_weapons log_bicycle_theft log_drugs log_public_order log_theft_from_the_person log_robbery"
+local crime_list "log_violence_and_sexual_offences log_antisocial_behaviour log_vehicle_crime log_other_theft log_burglary log_antisocial_behaviour log_shoplifting log_criminal_damage_and_arson log_other_crime log_possession_of_weapons log_bicycle_theft log_drugs log_public_order log_theft_from_the_person log_robbery"
 
 *do the regressions in a loop for each crime type
 foreach crime of local crime_list {
