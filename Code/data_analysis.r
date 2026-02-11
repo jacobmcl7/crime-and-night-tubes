@@ -362,8 +362,8 @@ plot(coefs = coefs,
     xsequence = seq(-20, 15, 5), 
     ymin = -0.05,
     ymax = 0.05,
-    title = "Dynamic Sun and Abraham (2021) results", 
-    note = "Simple treatment definition, theshold = 1km") 
+    title = "Dynamic Sun and Abraham (2021) results",
+    note = "Simple treatment definition, theshold = 1km")
 
 # save it
 ggsave("Crime and night tubes/Output/Results/Sunab_1km.png", width = 8, height = 6)
@@ -514,6 +514,7 @@ final_data <- final_data %>%
 
 # now these can be used in a regression
 TWFE_1km_disagg <- feols(log_theft_from_the_person ~ i(event_time_rich, ref = -1) + i(event_time_poor, ref = -1) | location + Month, data = final_data, cluster = "location")
+# 468 NAs, presumably due to missing imd_median (i.e. missing LSOA)
 
 # now prepare the coefficients for plotting
 coefs_rich <- plot_prepare(TWFE_1km_disagg, substring = "event_time_rich")
