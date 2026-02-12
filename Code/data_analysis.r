@@ -415,13 +415,21 @@ plot(coefs = coefs,
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8, height = 6)
 
+
+
+
+
+
+
+
+
 ####################################################################
 
 # 4) now do regression 1) with some extra controls
 
 # allow the effect of being close to a station, and the wealth of the region, to vary by month
 
-TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, min_any_dist) + i(Month, IMD_decile) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, IMD_decile) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls, substring = "event_time_1")
@@ -432,10 +440,38 @@ plot(coefs = coefs,
     ymin = -0.05,
     ymax = 0.05,
     title = "Dynamic TWFE results with controls",
-    note = "Simple treatment definition, theshold = 1km")
+    note = "Simple treatment definition, theshold = 1km, controls added")
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_controls.png", width = 8, height = 6)
 
 # note: adding time x region controls seems to restrict variation too much, leading to lost significance
 
+
+####################################################################
+
+# 4a) now with different thresholds
+
+for (dist in c(0.5, 0.75, 1.25)) {
+
+  event_time_var <- paste0("event_time_", dist)
+  
+  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) + i(Month, IMD_decile) | location + Month")
+  
+  TWFE <- feols(as.formula(formula_str), data = final_data, cluster = "location")
+  
+  coefs <- plot_prepare(TWFE, substring = paste0("event_time_", dist))
+
+  p <- plot(coefs = coefs,
+      xsequence = seq(-20, 15, 5),
+      ymin = -0.1,
+      ymax = 0.1,
+      title = paste0("Dynamic TWFE results - Distance threshold: ", dist, "km"), 
+      note = paste0("Simple treatment definition, theshold = ", dist, "km, controls added"))
+
+  # save it
+  ggsave(paste0("Crime and night tubes/Output/Results/TWFE_", dist, "km_controls.png"), plot = p, width = 8, height = 6)
+}
 
 
 
