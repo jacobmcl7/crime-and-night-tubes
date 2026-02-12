@@ -76,7 +76,7 @@ plot <- function(coefs, xsequence, ymax, ymin, title, note = "") {
           x = "Event Time (Months Since Treatment)",
           y = "Coefficient on Event Time",
           caption = note) +
-    theme_minimal()
+    theme_bw()
 }
 
 
@@ -230,7 +230,7 @@ ggplot(mean_data, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.f
        x = "Month",
        y = "Mean log number of crimes",
        color = "First Treatment Period") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time.png", width = 8, height = 6)
@@ -276,7 +276,7 @@ ggplot(mean_data_binned, aes(x = period_bin, y = adjusted_mean_log_num_crimes, c
        x = "Month (binned)",
        y = "Mean log number of crimes",
        color = "First Treatment Period") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_binned.png", width = 8, height = 6)
@@ -310,7 +310,7 @@ ggplot(mean_data_theft, aes(x = period, y = adjusted_mean_log_theft_from_the_per
        x = "Month",
        y = "Mean log theft from the person",
        color = "First Treatment Period") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time.png", width = 8, height = 6)
@@ -347,7 +347,7 @@ ggplot(mean_data_near, aes(x = period, y = adjusted_mean_log_num_crimes, color =
        y = "Mean log number of crimes",
        color = "First Treatment Period",
        note = "Modified control group - regions within 1km of any station") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_1km.png", width = 8, height = 6)
@@ -381,7 +381,7 @@ ggplot(mean_data_near_theft, aes(x = period, y = adjusted_mean_log_theft_from_th
        y = "Mean log theft from the person",
        color = "First Treatment Period",
        note = "Modified control group - regions within 1km of any station") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time_within_1km.png", width = 8, height = 6)
@@ -426,7 +426,7 @@ ggplot(mean_data_nt_near, aes(x = period, y = adjusted_mean_log_num_crimes, colo
        y = "Mean log number of crimes",
        color = "First Treatment Period",
        note = "Modified control group - regions between 1-2km of night tube station") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_2km_nt.png", width = 8, height = 6)
@@ -459,7 +459,7 @@ ggplot(mean_data_nt_near_theft, aes(x = period, y = adjusted_mean_log_theft_from
        y = "Mean log theft from the person",
        color = "First Treatment Period",
        note = "Modified control group - regions between 1-2km of night tube station") +
-  theme_minimal()
+  theme_bw()
 
 # save
 ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over_time_within_2km_nt.png", width = 8, height = 6)
@@ -649,7 +649,7 @@ ggplot(crime_bins, aes(x = crime_category, y = pct)) +
     x = "Number of Crimes",
     y = "Percentage of Observations"
   ) +
-  theme_minimal() +
+  theme_bw() +
   theme(panel.grid.major.x = element_blank())
 
 # save
@@ -692,7 +692,7 @@ ggplot(crime_bins_long, aes(x = crime_category, y = pct)) +
     x = "Number of Crimes per Location-Month",
     y = "Percentage of Observations"
   ) +
-  theme_minimal(base_size = 11) +
+  theme_bw(base_size = 11) +
   theme(
     panel.grid.major.x = element_blank(),
     panel.grid.minor = element_blank(),
@@ -789,21 +789,21 @@ ggplot(police_response_data) +
   geom_line(aes(x = period, y = total_thefts_robberies, color = "blue"), size = 1) +
   labs(title = "Total Thefts and Robberies Over Time by Station",
        x = "Period") +
-  theme_minimal() +
+  theme_bw() +
   theme(legend.position = "bottom")
 
 ggplot(police_response_data) +
   geom_line(aes(x = period, y = solved_thefts_robberies, color = "red"), size = 1) +
   labs(title = "Proportion Solved Over Time by Station",
        x = "Period") +
-  theme_minimal() +
+  theme_bw() +
   theme(legend.position = "bottom")
 
 ggplot(police_response_data) +
   geom_line(aes(x = period, y = solved_thefts_robberies/done_thefts_robberies, color = "red"), size = 1) +
   labs(title = "Proportion Solved Over Time by Station, of those with an outcome",
        x = "Period") +
-  theme_minimal() +
+  theme_bw() +
   theme(legend.position = "bottom")
 
 
@@ -824,6 +824,6 @@ ggplot(police_response_data, aes(x = period, y = solve_rate)) +
   labs(title = "Police Solve Rate Over Time for Total Crimes",
        x = "Period",
        y = "Solve Rate (%)") +
-  theme_minimal()
+  theme_bw()
 
 # this shows the dataset needs updating
