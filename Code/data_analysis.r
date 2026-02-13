@@ -1174,8 +1174,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results
@@ -1238,8 +1238,8 @@ for (t in seq(0, 15, by = 6)) {
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                        y = data_subset$residuals,
-                                       bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                       degree = 1,  # i.e. local linear
+                                       bandwidth = dpik(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                       degree = 0,  # i.e. local constant
                                        gridsize = 100))
    )
 }
@@ -1272,14 +1272,14 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_6_months.png", widt
 for (t in seq(0, 15, by = 3)) {
   
   # subset the data to the relevant event times
-  data_subset <- final_data %>%
+  data_subset <- second_stage_data %>%
     filter(event_time_1 >= t & event_time_1 < (t + 3))
   
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                                            y = data_subset$residuals,
-                                                           bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                                           degree = 1,  # i.e. local linear
+                                                           bandwidth = dpik(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                                           degree = 0,  # i.e. local constant
                                                            gridsize = 100))
   )
 }
@@ -1346,8 +1346,8 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results
@@ -1420,8 +1420,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results
@@ -1466,8 +1466,8 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results

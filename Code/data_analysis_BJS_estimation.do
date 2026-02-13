@@ -118,7 +118,13 @@ foreach crime of local crime_list {
 
 *8) add a triple difference estimation, for robustness, using a 1km cutoff around treated and untreated stations
 
-*FIX THIS!! still can't impute anything
+*this calculates it on a subset of the data, losing 62,000 of the 250,000ish post-treatment observations, because it cannot impute
+*UNDERSTAND WHY!!
+*it stays the same for different outcomes, suggesting this is an issue with how we define groups vs how we define treatment
+*'If you include group#period FEs, imputation is further impossible once all units in the group have been treated'
+    * are all units in either within_1km (no) or closest_station treated at some point? maybe, in congested areas with lots of stations
+*THIS NEEDS TO BE SORTED OUT - I THINK THERE ARE GROUPS (NEAREST STATIONS) WITH ALL UNITS WITHIN 1KM
+* confirm this
 
 *now split units observed in a period in two ways: 
     *by whether they are within 1km of a station or not
@@ -134,4 +140,25 @@ encode closest_station, gen(closest_station_n)
 egen id = group(closest_station_n within_1km)
 
 *now do the regression
-did_imputation log_num_crimes id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10)
+*have to use autosample to get it to work
+did_imputation log_num_crimes id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_all.csv", cells("b se") plain replace noobs
+
+*same for specific crimes: first robbery
+did_imputation log_robbery id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_robbery.csv", cells("b se") plain replace noobs
+
+*now theft
+did_imputation log_theft_from_the_person id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_theft.csv", cells("b se") plain replace noobs
+
+
+
+
+
+
+
+/* destring min_nt_central_dist min_nt_piccadilly_dist min_nt_victoria_dist min_nt_northern_dist min_nt_victoria_dist, replace force
+egen min_nt_dist = rowmin(min_nt_central_dist min_nt_piccadilly_dist min_nt_victoria_dist min_nt_northern_dist min_nt_victoria_dist)
+*count the number of observations for whom min_any_dist < min_nt_dist < 1
+gen tag = (min_any_dist < min_nt_dist & min_nt_dist < 1) */
