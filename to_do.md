@@ -10,6 +10,7 @@ next things to do:
  - get in the appropriate covariates - e.g. region and station properties
     - population density, local employment rates, land use mix, property values, nearby income/IMD, distance to central London (?) all interacted with time
     - while doing this, maybe undo the splitting of files for the geocoding - we don't need to do this
+    - SORT OUT ISSUES WITH COVARIANCES MATRIX NOT BEING POSITIVE DEF - NEEDS FIXING
 
  - get all notes into one place - move from overleaf
 

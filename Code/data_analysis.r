@@ -427,9 +427,13 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8,
 
 # 4) now do regression 1) with some extra controls
 
-# allow the effect of being close to a station, and the wealth of the region, to vary by month
+# allow the effect of all the controls to vary by month
+# don't include crime rank controls for now
 
-TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, IMD_decile) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+
+# no longer negative definite covariance matrix!!
+# WORK OUT WHY
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls, substring = "event_time_1")
@@ -447,7 +451,6 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_controls.png", width = 8, 
 
 # note: adding time x region controls seems to restrict variation too much, leading to lost significance
 
-
 ####################################################################
 
 # 4a) now with different thresholds
@@ -456,7 +459,7 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
   event_time_var <- paste0("event_time_", dist)
   
-  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) + i(Month, IMD_decile) | location + Month")
+  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month")
   
   TWFE <- feols(as.formula(formula_str), data = final_data, cluster = "location")
   
@@ -472,6 +475,51 @@ for (dist in c(0.5, 0.75, 1.25)) {
   # save it
   ggsave(paste0("Crime and night tubes/Output/Results/TWFE_", dist, "km_controls.png"), plot = p, width = 8, height = 6)
 }
+
+
+####################################################################
+
+# 4b) now for thefts individually
+
+TWFE_1km_controls_theft <- feols(log_theft_from_the_person ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_controls_theft, substring = "event_time_1")
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5),
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "Dynamic TWFE results with controls: theft",
+    note = "Simple treatment definition, theshold = 1km, controls added")
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_controls_theft.png", width = 8, height = 6)
+
+
+####################################################################
+
+# 4c) now for robberies individually
+
+TWFE_1km_controls_robbery <- feols(log_robbery ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_controls_robbery, substring = "event_time_1")
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5),
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "Dynamic TWFE results with controls: robbery",
+    note = "Simple treatment definition, theshold = 1km, controls added")
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_controls_robbery.png", width = 8, height = 6)
+
+
+
 
 
 
