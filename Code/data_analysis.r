@@ -1483,7 +1483,115 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total_poisson.png", width = 8, height = 6)
 
 
+####################################################################
 
+# 12f) spatial block boostrap the kernel regression for T&R count, by LSOA, to get confidence intervals
+
+# implement this manually
+
+# sample by LSOA
+set.seed(123) # for reproducibility
+
+# pre-compute row indices per spatial block, the LSOA
+block_indices <- split(seq_len(nrow(final_data)), final_data$LSOA11NM)
+blocks <- names(block_indices)
+
+# set the number of iterations
+N = 100
+
+# set up matrices to hold the results, and the distances
+boot_kern_matrix <- matrix(NA, nrow = N, ncol = 100)
+boot_kern_x <- NULL 
+
+# loop over the number of bootstrap iterations
+for (n in seq(1, N)) {
+
+    # resample blocks with replacement, then build bootstrap dataset by pulling all obs within sampled blocks
+    sampled_blocks <- sample(blocks, size = n_blocks, replace = TRUE)
+    row_ids <- unlist(block_indices[sampled_blocks], use.names = FALSE)
+    boot_data <- final_data[row_ids, ]
+
+    # now do the same as 12, but on boot_data
+
+    # collect not (yet) treated units
+    first_stage_data <- boot_data %>%
+      filter(event_time_1 < 0) %>%
+      select(location, Month, log_theft_robbery)
+
+    # do the regression
+    TWFE_1km_boot <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
+
+    # get fitted values and residuals for the whole data
+    boot_data$fitted_vals <- predict(TWFE_1km_boot, newdata = boot_data)
+    boot_data <- boot_data %>%
+      mutate(residuals = log_theft_robbery - fitted_vals)
+
+    # get a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
+    second_stage_data <- boot_data %>%
+      filter(event_time_1 >= 0)
+
+    # do the kernel regression and save the results
+    model_kerns <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                    y = second_stage_data$residuals,
+                                    bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                    degree = 1,  # i.e. local linear
+                                    gridsize = 100))
+
+    # store the y values as a row in the matrix
+    boot_kern_matrix[n, ] <- model_kerns$y
+
+    # save the x grid once
+    if (is.null(boot_kern_x)) boot_kern_x <- model_kerns$x
+
+    # print an update to track progress
+    print(paste0("Completed bootstrap iteration ", n))
+}
+
+# convert the matrix of results to long format
+boot_plot_df <- data.frame(
+  x = rep(boot_kern_x, each = N),
+  y = as.vector(boot_kern_matrix),
+  iteration = rep(1:N, times = 100)
+)
+
+# get pointwise CIs
+ci_lower <- apply(boot_kern_matrix, 2, quantile, probs = 0.025)
+ci_upper <- apply(boot_kern_matrix, 2, quantile, probs = 0.975)
+ci_mean  <- colMeans(boot_kern_matrix)
+ci_df <- data.frame(x = boot_kern_x, mean = ci_mean, lower = ci_lower, upper = ci_upper)
+
+# plot the results, with each bootstrap iteration as a thin line, and the pointwise CIs as a ribbon
+ggplot() +
+  geom_line(data = boot_plot_df, aes(x = x, y = y, group = iteration),
+            color = "grey70", size = 0.3, alpha = 0.3) +
+  geom_ribbon(data = ci_df, aes(x = x, ymin = lower, ymax = upper),
+              fill = "blue", alpha = 0.2) +
+  geom_line(data = ci_df, aes(x = x, y = mean), color = "blue", size = 0.8) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  labs(title = "Bootstrapped Treatment Effect Decay with Distance (T&R)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_bw()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery_bootstrap.png", width = 8, height = 6)
+
+
+# # pointwise CIs
+# ci_lower <- apply(boot_kern_matrix, 2, quantile, probs = 0.025)
+# ci_upper <- apply(boot_kern_matrix, 2, quantile, probs = 0.975)
+# ci_mean  <- colMeans(boot_kern_matrix)
+
+# ci_df <- data.frame(x = boot_kern_x, mean = ci_mean, lower = ci_lower, upper = ci_upper)
+
+# ggplot(ci_df, aes(x = x)) +
+# geom_ribbon(aes(ymin = lower, ymax = upper), fill = "blue", alpha = 0.2) +
+# geom_line(aes(y = mean), color = "blue", size = 0.8) +
+# geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+# labs(title = "Bootstrapped Treatment Effect Decay with Distance (T&R)",
+#       x = "Distance from Station (km)",
+#       y = "Treatment Effect") +
+# theme_bw()
 
 
 
