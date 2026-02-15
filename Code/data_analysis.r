@@ -1644,8 +1644,53 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery_boots
 #       y = "Treatment Effect") +
 # theme_bw()
 
+####################################################################
 
+# 12g) now do it as at the start, but with controls
 
+# get the data ready
+final_data <- final_data %>%
+  mutate(log_theft_robbery = log(theft_from_the_person + robbery + 1)) # add 1 to avoid log(0)
+
+# collect not (yet) treated units
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, log_theft_robbery, IMD, income_rank, education_rank, health_rank, barriers_rank, living_env_rank)
+
+# do the regression
+TWFE_1km_theft_robbery_controls <- feols(log_theft_robbery ~ i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = first_stage_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_1km_theft_robbery_controls, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_theft_robbery - fitted_vals)
+
+# now run a sequence of kernel regressions of the residuals on distance to closest active night tube station, by event time
+
+# plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units
+second_stage_data <- final_data %>%
+  filter(event_time_1 >= 0) %>%
+  filter(!is.na(residuals)) # drop any with NA residuals, which are likely those with missing values in the controls
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
+                                 y = second_stage_data$residuals,
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect",
+       caption = "Controls included in first-stage regression") +
+  theme_bw()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_controls.png", width = 8, height = 6)
 
 
 
