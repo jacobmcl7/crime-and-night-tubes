@@ -1158,7 +1158,7 @@ first_stage_data <- final_data %>%
   select(location, Month, log_theft_robbery)
 
 # do the regression
-TWFE_1km_theft_robbery <- feols(log_theft_robbery ~ 0 | location + Month, data = first_stage_data)
+TWFE_1km_theft_robbery <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
 
 # get fitted values and residuals for the whole data
 final_data$fitted_vals <- predict(TWFE_1km_theft_robbery, newdata = final_data)
@@ -1404,7 +1404,7 @@ first_stage_data <- final_data %>%
   select(location, Month, log_num_crimes)
 
 # do the regression
-TWFE_1km_total <- feols(log_num_crimes ~ 0 | location + Month, data = first_stage_data)
+TWFE_1km_total <- feols(log_num_crimes ~ 1 | location + Month, data = first_stage_data)
 
 # get fitted values and residuals for the whole data
 final_data$fitted_vals <- predict(TWFE_1km_total, newdata = final_data)
