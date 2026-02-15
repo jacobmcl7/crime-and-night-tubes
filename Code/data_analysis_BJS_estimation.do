@@ -125,6 +125,8 @@ foreach crime of local crime_list {
     * are all units in either within_1km (no) or closest_station treated at some point? maybe, in congested areas with lots of stations
 *THIS NEEDS TO BE SORTED OUT - I THINK THERE ARE GROUPS (NEAREST STATIONS) WITH ALL UNITS WITHIN 1KM
 * confirm this
+*it only cannot impute for regions <1km from a station, but with loads of closest stations, some treated and some not
+    *LOOK MORE INTO THIS
 
 *now split units observed in a period in two ways: 
     *by whether they are within 1km of a station or not

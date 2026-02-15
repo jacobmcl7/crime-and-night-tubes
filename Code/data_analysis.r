@@ -1174,8 +1174,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 0,  # i.e. local constant
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
                                  gridsize = 100))
 
 # plot the results
@@ -1191,37 +1191,37 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png", width = 8, height = 6)
 
 
-# alternative method - use the mgcv package to fit a generalised additive model (GAM)
+# # alternative method - use the mgcv package to fit a generalised additive model (GAM)
 
-# Fit using bam() - optimized for large datasets
-model_gam <- bam(residuals ~ s(min_active_dist, k = 20),
-                 data = second_stage_data,
-                 discrete = TRUE,  # major speed boost for large N
-                 nthreads = 4)     # parallel processing
+# # Fit using bam() - optimized for large datasets
+# model_gam <- bam(residuals ~ s(min_active_dist, k = 20),
+#                  data = second_stage_data,
+#                  discrete = TRUE,  # major speed boost for large N
+#                  nthreads = 4)     # parallel processing
 
-# Create prediction grid with SEs
-pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
-                                               max(second_stage_data$min_active_dist),
-                                               length.out = 100))
+# # Create prediction grid with SEs
+# pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
+#                                                max(second_stage_data$min_active_dist),
+#                                                length.out = 100))
 
-preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
-pred_grid$y <- preds$fit
-pred_grid$se <- preds$se.fit
-pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
-pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
+# preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
+# pred_grid$y <- preds$fit
+# pred_grid$se <- preds$se.fit
+# pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
+# pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
 
-# Plot
-ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
-  geom_line(color = "blue") +
-  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
-       x = "Distance from Station (km)",
-       y = "Treatment Effect") +
-  theme_bw()
+# # Plot
+# ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
+#   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
+#   geom_line(color = "blue") +
+#   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+#   labs(title = "Treatment Effect Decay with Distance (T&R)",
+#        x = "Distance from Station (km)",
+#        y = "Treatment Effect") +
+#   theme_bw()
 
-# save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery.png", width = 8, height = 6)
+# # save the graph
+# ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery.png", width = 8, height = 6)
 
 
 ####################################################################
@@ -1238,8 +1238,8 @@ for (t in seq(0, 15, by = 6)) {
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                        y = data_subset$residuals,
-                                       bandwidth = dpik(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                       degree = 0,  # i.e. local constant
+                                       bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                       degree = 1,  # i.e. local linear
                                        gridsize = 100))
    )
 }
@@ -1278,8 +1278,8 @@ for (t in seq(0, 15, by = 3)) {
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                                            y = data_subset$residuals,
-                                                           bandwidth = dpik(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                                           degree = 0,  # i.e. local constant
+                                                           bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
+                                                           degree = 1,  # i.e. local linear
                                                            gridsize = 100))
   )
 }
@@ -1346,8 +1346,8 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 0,  # i.e. local constant
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
                                  gridsize = 100))
 
 # plot the results
@@ -1364,35 +1364,35 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_theft_robbery_poisson.png"
 
 
 
-# now fit a GAM using bam()
-model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
-                 data = second_stage_data,
-                 discrete = TRUE,  # major speed boost for large N
-                 nthreads = 4)     # parallel processing
+# # now fit a GAM using bam()
+# model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
+#                  data = second_stage_data,
+#                  discrete = TRUE,  # major speed boost for large N
+#                  nthreads = 4)     # parallel processing
 
-# Create prediction grid with SEs
-pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
-                                               max(second_stage_data$min_active_dist),
-                                               length.out = 100))
+# # Create prediction grid with SEs
+# pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
+#                                                max(second_stage_data$min_active_dist),
+#                                                length.out = 100))
 
-preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
-pred_grid$y <- preds$fit
-pred_grid$se <- preds$se.fit
-pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
-pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
+# preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
+# pred_grid$y <- preds$fit
+# pred_grid$se <- preds$se.fit
+# pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
+# pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
 
-# Plot
-ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
-  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
-  geom_line(color = "blue") +
-  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
-       x = "Distance from Station (km)",
-       y = "Treatment Effect") +
-  theme_bw()
+# # Plot
+# ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
+#   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
+#   geom_line(color = "blue") +
+#   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+#   labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
+#        x = "Distance from Station (km)",
+#        y = "Treatment Effect") +
+#   theme_bw()
 
-# save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery_poisson.png", width = 8, height = 6)
+# # save the graph
+# ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery_poisson.png", width = 8, height = 6)
 
 
 ####################################################################
@@ -1420,8 +1420,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 0,  # i.e. local constant
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
                                  gridsize = 100))
 
 # plot the results
@@ -1466,8 +1466,8 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpik(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 0,  # i.e. local constant
+                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
                                  gridsize = 100))
 
 # plot the results
