@@ -1487,6 +1487,8 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total_poisson.png",
 
 # 12f) spatial block boostrap the kernel regression for T&R count, by LSOA, to get confidence intervals
 
+# NOTE: NEED TO DETERMINE WHETHER THIS IS VALID
+
 # implement this manually
 
 # sample by LSOA
@@ -1554,7 +1556,8 @@ boot_plot_df <- data.frame(
   iteration = rep(1:N, times = 100)
 )
 
-# get pointwise CIs
+# get pointwise percentile CIs (95%)
+# note - maybe switch to the percentile-t method
 ci_lower <- apply(boot_kern_matrix, 2, quantile, probs = 0.025)
 ci_upper <- apply(boot_kern_matrix, 2, quantile, probs = 0.975)
 ci_mean  <- colMeans(boot_kern_matrix)

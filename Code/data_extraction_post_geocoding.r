@@ -407,20 +407,122 @@ locations <- locations %>%
 # now import the IMD data
 imd_data <- as.data.frame(read_excel("Crime and night tubes EXTRA DATA/IMD data/File_2_ID_2015_Domains_of_deprivation.xlsx", sheet = 2))
 
-# rename some columns for ease of use (column 5)
+# rename some columns for ease of use
 colnames(imd_data)[5] <- "IMD"
-colnames(imd_data)[6] <- "IMD_decile"
+colnames(imd_data)[7] <- "income_rank"
+colnames(imd_data)[9] <- "employment_rank"
+colnames(imd_data)[11] <- "education_rank"
+colnames(imd_data)[13] <- "health_rank"
+colnames(imd_data)[15] <- "crime_rank"
+colnames(imd_data)[17] <- "barriers_rank"
+colnames(imd_data)[19] <- "living_env_rank"
 
 # merge this with the locations data, on the LSOA code
 locations <- locations %>%
-    left_join(imd_data %>% select(`LSOA code (2011)`, `LSOA name (2011)`, IMD, IMD_decile), by = c("LSOA11CD" = "LSOA code (2011)"))
+    left_join(imd_data %>% select(`LSOA code (2011)`, `LSOA name (2011)`, IMD, income_rank, employment_rank, education_rank, health_rank, crime_rank, barriers_rank, living_env_rank), by = c("LSOA11CD" = "LSOA code (2011)"))
 
-# some NAs - poor geocoding, so maybe drop them
+# 103 NAs - poor geocoding, so maybe drop them
 
 
-# merge with the final data, on location
+# now import the population density data
+pop_density <- as.data.frame(read.csv("Crime and night tubes EXTRA DATA/Census data/pop_density.csv"))
+
+# keep the relevant columns
+colnames(pop_density)[3] <- "LSOA code"
+colnames(pop_density)[7] <- "pop_density"
+pop_density <- pop_density %>%
+    select(`LSOA code`, `pop_density`)
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(pop_density, by = c("LSOA11CD" = "LSOA code"))
+
+# 35 NAs - again probably poor geocoding
+
+
+# now single adult data
+single_adults <- as.data.frame(read.csv("Crime and night tubes EXTRA DATA/Census data/single_adult_hh.csv"))
+
+# keep the relevant columns
+colnames(single_adults)[3] <- "LSOA code"
+colnames(single_adults)[5] <- "total_hh"
+colnames(single_adults)[6] <- "single_adult_hh"
+single_adults <- single_adults %>%
+    select(`LSOA code`, `total_hh`, `single_adult_hh`) %>%
+    mutate(single_adult_hh_prop = single_adult_hh / total_hh)
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(single_adults %>% select(`LSOA code`, single_adult_hh_prop), by = c("LSOA11CD" = "LSOA code"))
+
+
+
+# now age data
+age_data <- as.data.frame(read.csv("Crime and night tubes EXTRA DATA/Census data/age.csv"))
+
+# rename columns to make the age calculation easier
+names(age_data)[6:106] <- paste0("count_age_", 0:100)
+
+# calculate average age
+age_data$avg_age <- apply(age_data[, paste0("count_age_", 0:100)], 1, function(x) {
+  weighted.mean(0:100, x)
+})
+
+# keep the relevant columns
+colnames(age_data)[3] <- "LSOA code"
+age_data <- age_data %>%
+    select(`LSOA code`, avg_age)
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(age_data, by = c("LSOA11CD" = "LSOA code"))
+
+
+# now ethnicity data
+ethnicity <- as.data.frame(read.csv("Crime and night tubes EXTRA DATA/Census data/ethnic_groups.csv"))
+
+# rename columns
+colnames(ethnicity)[3] <- "LSOA code"
+colnames(ethnicity)[5] <- "total"
+colnames(ethnicity)[7] <- "same_eth_group"
+
+# calculate the proportion of households that have the same ethnic group
+ethnicity$prop_same_eth_group <- ethnicity$same_eth_group / ethnicity$total
+
+# keep the relevant columns
+ethnicity <- ethnicity %>%
+    select(`LSOA code`, prop_same_eth_group)
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(ethnicity, by = c("LSOA11CD" = "LSOA code"))
+
+
+# get in health data
+health <- as.data.frame(read.csv("Crime and night tubes EXTRA DATA/Census data/health.csv"))
+
+# I convert 'very good' to 5, 'good' to 4, 'fair' to 3, 'bad' to 2, and 'very bad' to 1, and then calculate an average health score for each location
+# rename columns to make the average health score calculation easier
+names(health)[6:10] <- paste0("count_health_", 5:1)
+health$avg_health_score <- apply(health[, paste0("count_health_", 5:1)], 1, function(x) {
+  weighted.mean(5:1, x)
+})
+
+# keep the relevant columns
+colnames(health)[3] <- "LSOA code"
+health <- health %>%
+    select(`LSOA code`, avg_health_score)
+
+# merge this with the locations data, on the LSOA code
+locations <- locations %>%
+    left_join(health, by = c("LSOA11CD" = "LSOA code"))
+
+
+# finally, merge locations with the final data, on location
 final_data <- final_data %>%
-    left_join(locations %>% select(location, WD24NM, MSOA21NM, LSOA11NM, IMD, IMD_decile), by = "location")
+    left_join(locations %>% select(location, WD24NM, MSOA21NM, LSOA11NM, IMD, income_rank, employment_rank, education_rank, health_rank, crime_rank, barriers_rank, living_env_rank, pop_density, single_adult_hh_prop, avg_age, prop_same_eth_group, avg_health_score), by = "location")
+
+
 
 ##############################################################
 
@@ -430,6 +532,6 @@ save(final_data, file = "Crime and night tubes EXTRA DATA/final_data.RData")
 # this is our final dataset with all the info we need - it has:
 # - crime count in each location with recorded crimes 
 # - names and lines served by stations within 2km of each points, appropriately processed for analysis
-
+# - all the demographic and socioeconomic data we've extracted and merged
 # from this we can define treatment, as we need to, and then run the appropriate regressions
 # this is the key decision, which will be made (and varied) in the next R script
