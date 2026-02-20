@@ -747,6 +747,53 @@ theft_robbery_summary <- theft_robbery_summary %>%
 write.xlsx(theft_robbery_summary, "Crime and night tubes EXTRA DATA/theft_robbery_summary.xlsx")
 
 
+############################################################
+
+# plot the evolution of the weekly number of night-tube journeys
+
+# load the night tube usage data
+night_tube_usage <- read_csv("Crime and night tubes EXTRA DATA/TfL data/NT demand to end 2017.csv")
+
+# clean it
+# keep only rows 1 and 3
+night_tube_usage <- night_tube_usage[c(1, 3), ]
+# transpose it
+night_tube_usage <- as.data.frame(t(night_tube_usage))
+# set the first row as column names
+colnames(night_tube_usage) <- night_tube_usage[1, ]
+colnames(night_tube_usage)[1] <- "weeks_since_opening"
+night_tube_usage <- night_tube_usage[-1, ]
+# remove the row names
+rownames(night_tube_usage) <- NULL
+# get the number of weeks variable as just the row number
+night_tube_usage <- night_tube_usage %>%
+  mutate(weeks_since_opening = row_number() - 1)
+# cut off at the end of 2017
+night_tube_usage <- night_tube_usage %>%
+  filter(weeks_since_opening <= 71)
+# convert the number of journeys to numeric, after removing commas
+night_tube_usage <- night_tube_usage %>%
+  mutate(`Journeys/ Weekend` = as.numeric(gsub(",", "", `Journeys/ Weekend`)))
+
+# now plot it, adding lines at opening points of each line, and a label for each line
+ggplot(night_tube_usage, aes(x = weeks_since_opening, y = `Journeys/ Weekend`)) +
+  geom_line(color = "#404040", linewidth = 0.75) +
+  geom_vline(xintercept = 0, linetype = "dashed", linewidth = 0.5, color = "#E32017") +
+  geom_vline(xintercept = 7, linetype = "dashed", linewidth = 0.5, color = "#A0A5A9") +
+  geom_vline(xintercept = 13, linetype = "dashed", linewidth = 0.5, color = "#000000") +
+  geom_vline(xintercept = 17, linetype = "dashed", linewidth = 0.5, color = "#003688") +
+  geom_label(x = 0.5, y = 50000, label = "Central, Victoria lines open", color = "#E32017", hjust = 0, size = 3) +
+  geom_label(x = 7.5, y = 70000, label = "Jubilee line opens", color = "#A0A5A9", hjust = 0, size = 3) +
+  geom_label(x = 13.5, y = 90000, label = "Northern line opens", color = "#000000", hjust = 0, size = 3) +
+  geom_label(x = 17.5, y = 110000, label = "Piccadilly line opens", color = "#003688", hjust = 0, size = 3) +
+  labs(title = "Night Tube Usage Over Time",
+       x = "Weeks Since Opening",
+       y = "Number of Journeys per Weekend") +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/night_tube_usage_over_time.png", width = 8, height = 6)
+
 
 ############################################################
 
