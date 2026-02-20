@@ -83,6 +83,8 @@ data$`Transaction Type` <- as.factor(data$`Transaction Type`)
 # sort in terms of week, night, station, traffic date 15 minute, and transaction type
 data <- data %>%
     arrange(Week, Night, `Travel Location`, `Traffic Date 15 Minute`, `Transaction Type`)
+# drop the row names
+rownames(data) <- NULL
 
 
 # save the cleaned data as a csv file
