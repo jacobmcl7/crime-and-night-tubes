@@ -1,0 +1,89 @@
+# this R script imports and cleans the TfL ridership data
+
+#######################################################################################
+
+# load libraries
+library(readxl)
+library(writexl)
+library(tidyverse)
+
+# set working directory
+setwd("~/Economics/Papers (WIP)/Crime and night tubes EXTRA DATA/TfL data")
+
+#######################################################################################
+
+# import and process the first one
+data <- as.data.frame(read.csv("160812-13.csv"))
+
+# remove rows up until the one where the first column is "Count of Taps"
+data <- data[which(data[,1] == "Count of Taps"):nrow(data), ]
+# remove empty rows
+data <- data[-which(data$X == "" | data$X.1 == ""), ]
+# remove empty columns (i.e. ones with only NAs) - i.e. keep the first 7
+data <- data[, 1:7]
+# set first row as column names, then remove it from the data frame
+colnames(data) <- data[1, ]
+data <- data[-1, ]
+# reorganise the timing convention, and add a week variable
+data <- data %>%
+    mutate(`Traffic Date Sort 15 Minute` = as.numeric(`Traffic Date Sort 15 Minute`)) %>%
+    mutate(Night = ifelse((`Day Of Week` == "Friday" | (`Day Of Week` == "Saturday" & `Traffic Date Sort 15 Minute` <= 10)), 1, 2)) %>%
+    mutate('Traffic Date 15 Minute' = substr(`Traffic Date 15 Minute`, 1, 5)) %>%
+    mutate(Week = "160812-13")
+# remove irrelevant variables
+data <- data %>%
+    select(-c(`Traffic Date Sort 15 Minute`, `Day Of Week`, `Traffic Date`))
+
+
+# now make a loop to import and process the rest of the files, and bind them together
+
+# collect all files in the directory, other than the first and the last one (which is an overall count)
+file_list <- list.files(pattern = "*.csv")[-c(1, which(list.files(pattern = "*.csv") == "170114-15.csv"), length(list.files(pattern = "*.csv")))]
+# THIS MIDDLE ONE IS STRANGE - WORK OUT WHAT IT IS!
+
+# loop over them and process them in the same way as the first one, then bind them together
+for (file in file_list) {
+    # import the data
+    temp_data <- as.data.frame(read.csv(file))
+    
+    # remove rows up until the one where the first column is "Count of Taps"
+    temp_data <- temp_data[which(temp_data[,1] == "Count of Taps"):nrow(temp_data), ]
+    # remove empty rows
+    temp_data <- temp_data[-which(temp_data$X == "" | temp_data$X.1 == ""), ]
+    # remove empty columns (i.e. ones with only NAs) - i.e. keep the first 7
+    temp_data <- temp_data[, 1:7]
+    # set first row as column names, then remove it from the data frame
+    colnames(temp_data) <- temp_data[1, ]
+    temp_data <- temp_data[-1, ]
+    # reorganise the timing convention, and add a week variable
+    temp_data <- temp_data %>%
+        mutate(`Traffic Date Sort 15 Minute` = as.numeric(`Traffic Date Sort 15 Minute`)) %>%
+        mutate(Night = ifelse((`Day Of Week` == "Friday" | (`Day Of Week` == "Saturday" & `Traffic Date Sort 15 Minute` <= 10)), 1, 2)) %>%
+        mutate('Traffic Date 15 Minute' = substr(`Traffic Date 15 Minute`, 1, 5)) %>%
+        mutate(Week = substr(file, 1, nchar(file)-4))
+    # remove irrelevant variables
+    temp_data <- temp_data %>%
+        select(-c(`Traffic Date Sort 15 Minute`, `Day Of Week`, `Traffic Date`))
+    
+    # bind to the main data frame
+    data <- rbind(data, temp_data)
+}
+
+# now some final cleaning
+# convert the count variable to numeric
+data$`Count of Taps` <- as.numeric(data$`Count of Taps`)
+# convert the station variable to a factor
+data$Station <- as.factor(data$Station)
+# convert the night variable to a factor
+data$Night <- as.factor(data$Night)
+# convert the week variable to a factor
+data$Week <- as.factor(data$Week)
+# convert the transaction type variable to a factor
+data$`Transaction Type` <- as.factor(data$`Transaction Type`)
+# sort in terms of week, night, station, traffic date 15 minute, and transaction type
+data <- data %>%
+    arrange(Week, Night, `Travel Location`, `Traffic Date 15 Minute`, `Transaction Type`)
+
+
+# save the cleaned data as a csv file
+write.csv(data, "TfL_ridership_data_cleaned.csv", row.names = FALSE)

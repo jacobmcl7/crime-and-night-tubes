@@ -3,6 +3,8 @@ to do list:
 next things to do:
  - cluster BJS SEs
 
+ - work out what to do with controls
+
  - do Conley SEs
 
  - Poisson graphing wrong? check intercept at et = -1
