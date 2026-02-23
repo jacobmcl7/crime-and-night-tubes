@@ -1918,22 +1918,29 @@ merged_data <- panel(merged_data, ~`Travel Location` + period)
 
 # now ready for regressions
 
+# Q: WHAT SEs TO USE?
+# also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
+
+# start by regressing the change in ridership, in levels, on the lagged change in the imputed treatment effect, with fixed effects for station and month
+behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels, vcov = "hetero")
+
+# now add more lags of the imputed treatment effect
+behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels_lags, vcov = "hetero")
+
+# now include lags of the change in ridership as well
+behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels_lags_taps, vcov = "hetero")
+
 # now regress the proportional change in ridership on the lagged proportional change in the imputed treatment effect, with fixed effects for station and month
 behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
-summary(behaviour_reg_prop)
+summary(behaviour_reg_prop, vcov = "hetero")
 
-# now do it with levels instead of proportional changes
-behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
-summary(behaviour_reg_levels)
+# but this last one is a bit strange - proportional change of a log is very hard to interpret
 
-# now do it with multiple lags (of levels)
-behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | `Travel Location` + period, data = merged_data)
-summary(behaviour_reg_levels_lags)
+# now put them all in a latex table and export it
+# TO BE DONE
 
-# now do it as well with lags of the tap count
-behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_taps, 1) | `Travel Location` + period, data = merged_data)
-summary(behaviour_reg_levels_lags_taps)
-
-# CAREFUL WITH BIAS, SEs ETC!!
 ################################################################################################
 ################################################################################################
