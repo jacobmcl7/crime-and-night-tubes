@@ -221,6 +221,27 @@ location_info <- location_info %>%
   left_join(min_dist_red, by = "location")
 
 
+
+# also get a string variable giving the names of each station within 1km of each location
+stations_within_1km <- ls_pairs %>%
+    filter(NEAR_DIST <= 1) %>%
+    group_by(location) %>%
+    summarise(stations_within_1km = paste(NAME, collapse = ", ")) %>%
+    ungroup()
+
+# do the same within 0.5km
+stations_within_0.5km <- ls_pairs %>%
+    filter(NEAR_DIST <= 0.5) %>%
+    group_by(location) %>%
+    summarise(stations_within_0.5km = paste(NAME, collapse = ", ")) %>%
+    ungroup()
+
+# merge them in too
+location_info <- location_info %>%
+    left_join(stations_within_1km, by = "location") %>%
+    left_join(stations_within_0.5km, by = "location")
+
+
 ###############################################################
 
 
