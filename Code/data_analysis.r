@@ -1750,5 +1750,190 @@ for (crime in crime_types_bjs) {
 # save this too
 ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_grid.png", width = 22, height = 12)
 
+
+###################################################################
+
+
+
+
+
+
+
+
+# 14) now examine the ridership data and the aggregated station-level imputed crime effect
+
+# load in the ridership data
+ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_weekly_ridership.csv")
+
+# now aggregate the imputed treatment effects to the station level
+
+
+# first get the imputed treatment effect for each location-month, using the kernel regression from 12c)
+
+# subset the data to pre-treatment observations, as before
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, log_num_crimes)
+
+# do the regression
+TWFE_1km_total <- feols(log_num_crimes ~ 1 | location + Month, data = first_stage_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_1km_total, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_num_crimes - fitted_vals)
+
+
+# we do this on 2017 data, so first drop all earlier years and untreated observations
+behaviour_data <- final_data %>%
+  filter(period >= 25) %>%  # i.e. from 2017 onwards
+  filter(event_time_1 >= 0)  # i.e. only treated observations
+
+
+# now do the station-level aggregation
+
+# split the data up by station, so that we have one row per station-month, with a column for the imputed treatment effect
+# then aggregate to get the average imputed treatment effect for all observations within 0.5km of each station, by month
+station_ATT_data <- behaviour_data %>%
+  # Split the comma-separated station names into one row per station
+  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
+  # Group by station and time period
+  group_by(stations_within_0.5km, period) %>%
+  summarise(avg_TE = mean(residuals)) %>%
+  ungroup() %>%
+  rename(station = stations_within_0.5km)
+
+
+# now we have two sets of station-level data, and we need to merge them
+
+# first check the station naming in both datasets, and clean if necessary
+# get the unique station names in each dataset
+unique_stations_ridership <- unique(ridership_data$`Travel Location`)
+unique_stations_ATT <- unique(station_ATT_data$station)
+# print them out to check
+print(unique_stations_ridership)
+print(unique_stations_ATT)
+
+# the ATT data has more, primarily because it includes also untreated stations
+# these will be dropped as they aren't relevant for this
+
+########
+
+# NOTE - THE BELOW CLEANING SHOULD BE MOVED TO THE TFL CLEANING SCRIPT
+
+# now do some manual cleaning of the ridership data to match the naming conventions of the ATT data
+# from Claude, but checked
+station_name_mapping <- c(
+  # LU suffix removals / punctuation fixes
+  "Balham LU"                    = "Balham",
+  "Bethnal Green LU"             = "Bethnal Green",
+  "Brixton LU"                   = "Brixton",
+  "Charing Cross LU"             = "Charing Cross",
+  "Euston LU"                    = "Euston",
+  "Finsbury Park LU"             = "Finsbury Park",
+  "Liverpool Street LU"          = "Liverpool Street",
+  "London Bridge LU"             = "London Bridge",
+  "Vauxhall LU"                  = "Vauxhall",
+  "Victoria LU"                  = "Victoria",
+  "West Hampstead LU"            = "West Hampstead",
+  "Heathrow Terminal 5 LU"       = "Heathrow Terminal 5",
+  "Heathrow Terminals 123 LU"    = "Heathrow Terminals 1-2-3",
+
+  # Spelling / punctuation differences
+  "Earls Court"                  = "Earl's Court",
+  "Shepherds Bush LU"            = "Shepherd's Bush",
+  "St Johns Wood"                = "St. John's Wood",
+  "St Pauls"                     = "St. Paul's",
+  "Totteridge"                   = "Totteridge & Whetstone",
+  "Hammersmith D&P"              = "Hammersmith (Dist&Picc Line)",
+
+  # Multiple ridership entries → one ATT entry
+  "Canary Wharf LU (E1)"         = "Canary Wharf",
+  "Canary Wharf LU (E2)"         = "Canary Wharf",
+  "Kings Cross LU (North)"       = "King's Cross St. Pancras",
+  "Kings Cross LU (Tube)"        = "King's Cross St. Pancras",
+  "Kings Cross LU (Western)"     = "King's Cross St. Pancras",
+  "Waterloo LU (Jubilee)"        = "Waterloo"
+)
+
+# Apply the mapping to the original variable in the ridership data
+ridership_data <- ridership_data %>%
+  mutate(`Travel Location` = dplyr::recode(`Travel Location`, !!!station_name_mapping))
+
+# the only one from the ridership data that couldn't be matched was Heathrow Terminal 4 - just drop this at the right time
+
+# now clean the week variable to get it to match the period variable in the major dataset
+# extract the third and fourth character (corresponding to the month), and convert to numeric
+ridership_data <- ridership_data %>%
+  mutate(month = as.numeric(substr(Week, 3, 4))) %>%
+  # now convert to period variable, where period is month + 24 (i.e. month 1 of 2017 is period 25), and then group into two month periods to match the main dataset
+  mutate(period = month + 24) 
+
+# now get the average of Total_Taps for each station and period
+ridership_data <- ridership_data %>%
+  group_by(`Travel Location`, period) %>%
+  summarise(monthly_avg_taps = mean(Total_Taps)) %>%
+  ungroup()
+
+########
+
+# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4
+# do this via an inner join, to drop unmatched stations on both sides (which will also drop Heathrow T4)
+merged_data <- ridership_data %>%
+  inner_join(
+    station_ATT_data,
+    by = c("Travel Location" = "station", "period")
+  )
+
+# correct number of observations in the merged dataset - only the 12 from Heathrow T4 were lost from the ridership data
+
+# now create a variable giving the proportional change in ridership compared to the previous period, for each station
+merged_data <- merged_data %>%
+  group_by(`Travel Location`) %>%
+  arrange(period) %>%
+  mutate(prop_change_avg_taps = (monthly_avg_taps - lag(monthly_avg_taps)) / lag(monthly_avg_taps)) %>%
+  ungroup()
+# do the same for levels
+merged_data <- merged_data %>%
+  group_by(`Travel Location`) %>%
+  arrange(period) %>%
+  mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
+  ungroup()
+
+# now do the same for proportional change in the imputed treatment effect
+merged_data <- merged_data %>%
+  group_by(`Travel Location`) %>%
+  arrange(period) %>%
+  mutate(prop_change_avg_TE = (avg_TE - lag(avg_TE)) / lag(avg_TE)) %>%
+  ungroup()
+# do the same for levels
+merged_data <- merged_data %>%
+  group_by(`Travel Location`) %>%
+  arrange(period) %>%
+  mutate(change_avg_TE = avg_TE - lag(avg_TE)) %>%
+  ungroup()
+
+# finally, declare the merged data as a panel
+merged_data <- panel(merged_data, ~`Travel Location` + period)
+
+# now ready for regressions
+
+# now regress the proportional change in ridership on the lagged proportional change in the imputed treatment effect, with fixed effects for station and month
+behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_prop)
+
+# now do it with levels instead of proportional changes
+behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels)
+
+# now do it with multiple lags (of levels)
+behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels_lags)
+
+# now do it as well with lags of the tap count
+behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_taps, 1) | `Travel Location` + period, data = merged_data)
+summary(behaviour_reg_levels_lags_taps)
+
+# CAREFUL WITH BIAS, SEs ETC!!
 ################################################################################################
 ################################################################################################
