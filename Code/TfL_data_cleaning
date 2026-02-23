@@ -93,3 +93,6 @@ write.csv(data, "TfL_ridership_data_cleaned.csv", row.names = FALSE)
 station_weekly <- data %>%
     group_by(`Travel Location`, Week) %>%
     summarise(Total_Taps = sum(`Count of Taps`))
+
+# save this as a csv file
+write.csv(station_weekly, "TfL_station_weekly_ridership.csv", row.names = FALSE)
