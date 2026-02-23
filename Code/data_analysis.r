@@ -1763,12 +1763,9 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_grid.png", widt
 # 14) now examine the ridership data and the aggregated station-level imputed crime effect
 
 # load in the ridership data
-ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_weekly_ridership.csv")
+ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
 
-# now aggregate the imputed treatment effects to the station level
-
-
-# first get the imputed treatment effect for each location-month, using the kernel regression from 12c)
+# now get the imputed treatment effect for each location-month, using the kernel regression from 12c)
 
 # subset the data to pre-treatment observations, as before
 first_stage_data <- final_data %>%
@@ -1783,12 +1780,10 @@ final_data$fitted_vals <- predict(TWFE_1km_total, newdata = final_data)
 final_data <- final_data %>%
   mutate(residuals = log_num_crimes - fitted_vals)
 
-
 # we do this on 2017 data, so first drop all earlier years and untreated observations
 behaviour_data <- final_data %>%
   filter(period >= 25) %>%  # i.e. from 2017 onwards
   filter(event_time_1 >= 0)  # i.e. only treated observations
-
 
 # now do the station-level aggregation
 
@@ -1803,118 +1798,57 @@ station_ATT_data <- behaviour_data %>%
   ungroup() %>%
   rename(station = stations_within_0.5km)
 
-
 # now we have two sets of station-level data, and we need to merge them
 
 # first check the station naming in both datasets, and clean if necessary
-# get the unique station names in each dataset
-unique_stations_ridership <- unique(ridership_data$`Travel Location`)
-unique_stations_ATT <- unique(station_ATT_data$station)
-# print them out to check
-print(unique_stations_ridership)
-print(unique_stations_ATT)
-
-# the ATT data has more, primarily because it includes also untreated stations
+# # get the unique station names in each dataset
+# unique_stations_ridership <- unique(ridership_data$`station`)
+# unique_stations_ATT <- unique(station_ATT_data$station)
+# # print them out to check
+# print(unique_stations_ridership)
+# print(unique_stations_ATT)
+# the ATT data has more, because it includes also untreated stations near treated ones
 # these will be dropped as they aren't relevant for this
+# the relevant cleaning is done in the TfL cleaning file
 
-########
-
-# NOTE - THE BELOW CLEANING SHOULD BE MOVED TO THE TFL CLEANING SCRIPT
-
-# now do some manual cleaning of the ridership data to match the naming conventions of the ATT data
-# from Claude, but checked
-station_name_mapping <- c(
-  # LU suffix removals / punctuation fixes
-  "Balham LU"                    = "Balham",
-  "Bethnal Green LU"             = "Bethnal Green",
-  "Brixton LU"                   = "Brixton",
-  "Charing Cross LU"             = "Charing Cross",
-  "Euston LU"                    = "Euston",
-  "Finsbury Park LU"             = "Finsbury Park",
-  "Liverpool Street LU"          = "Liverpool Street",
-  "London Bridge LU"             = "London Bridge",
-  "Vauxhall LU"                  = "Vauxhall",
-  "Victoria LU"                  = "Victoria",
-  "West Hampstead LU"            = "West Hampstead",
-  "Heathrow Terminal 5 LU"       = "Heathrow Terminal 5",
-  "Heathrow Terminals 123 LU"    = "Heathrow Terminals 1-2-3",
-
-  # Spelling / punctuation differences
-  "Earls Court"                  = "Earl's Court",
-  "Shepherds Bush LU"            = "Shepherd's Bush",
-  "St Johns Wood"                = "St. John's Wood",
-  "St Pauls"                     = "St. Paul's",
-  "Totteridge"                   = "Totteridge & Whetstone",
-  "Hammersmith D&P"              = "Hammersmith (Dist&Picc Line)",
-
-  # Multiple ridership entries → one ATT entry
-  "Canary Wharf LU (E1)"         = "Canary Wharf",
-  "Canary Wharf LU (E2)"         = "Canary Wharf",
-  "Kings Cross LU (North)"       = "King's Cross St. Pancras",
-  "Kings Cross LU (Tube)"        = "King's Cross St. Pancras",
-  "Kings Cross LU (Western)"     = "King's Cross St. Pancras",
-  "Waterloo LU (Jubilee)"        = "Waterloo"
-)
-
-# Apply the mapping to the original variable in the ridership data
-ridership_data <- ridership_data %>%
-  mutate(`Travel Location` = dplyr::recode(`Travel Location`, !!!station_name_mapping))
-
-# the only one from the ridership data that couldn't be matched was Heathrow Terminal 4 - just drop this at the right time
-
-# now clean the week variable to get it to match the period variable in the major dataset
-# extract the third and fourth character (corresponding to the month), and convert to numeric
-ridership_data <- ridership_data %>%
-  mutate(month = as.numeric(substr(Week, 3, 4))) %>%
-  # now convert to period variable, where period is month + 24 (i.e. month 1 of 2017 is period 25), and then group into two month periods to match the main dataset
-  mutate(period = month + 24) 
-
-# now get the average of Total_Taps for each station and period
-ridership_data <- ridership_data %>%
-  group_by(`Travel Location`, period) %>%
-  summarise(monthly_avg_taps = mean(Total_Taps)) %>%
-  ungroup()
-
-########
-
-# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4
+# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4 (which was in the ridership data but not in the final data - work out why)
 # do this via an inner join, to drop unmatched stations on both sides (which will also drop Heathrow T4)
 merged_data <- ridership_data %>%
   inner_join(
     station_ATT_data,
-    by = c("Travel Location" = "station", "period")
+    by = c("station", "period")
   )
 
 # correct number of observations in the merged dataset - only the 12 from Heathrow T4 were lost from the ridership data
 
 # now create a variable giving the proportional change in ridership compared to the previous period, for each station
 merged_data <- merged_data %>%
-  group_by(`Travel Location`) %>%
+  group_by(station) %>%
   arrange(period) %>%
   mutate(prop_change_avg_taps = (monthly_avg_taps - lag(monthly_avg_taps)) / lag(monthly_avg_taps)) %>%
   ungroup()
 # do the same for levels
 merged_data <- merged_data %>%
-  group_by(`Travel Location`) %>%
+  group_by(station) %>%
   arrange(period) %>%
   mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
   ungroup()
 
 # now do the same for proportional change in the imputed treatment effect
 merged_data <- merged_data %>%
-  group_by(`Travel Location`) %>%
+  group_by(station) %>%
   arrange(period) %>%
   mutate(prop_change_avg_TE = (avg_TE - lag(avg_TE)) / lag(avg_TE)) %>%
   ungroup()
 # do the same for levels
 merged_data <- merged_data %>%
-  group_by(`Travel Location`) %>%
+  group_by(station) %>%
   arrange(period) %>%
   mutate(change_avg_TE = avg_TE - lag(avg_TE)) %>%
   ungroup()
 
 # finally, declare the merged data as a panel
-merged_data <- panel(merged_data, ~`Travel Location` + period)
+merged_data <- panel(merged_data, ~ station + period)
 
 # now ready for regressions
 
@@ -1922,19 +1856,20 @@ merged_data <- panel(merged_data, ~`Travel Location` + period)
 # also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
 
 # start by regressing the change in ridership, in levels, on the lagged change in the imputed treatment effect, with fixed effects for station and month
-behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
+behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | station + period, data = merged_data)
 summary(behaviour_reg_levels, vcov = "hetero")
 
 # now add more lags of the imputed treatment effect
-behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | `Travel Location` + period, data = merged_data)
+behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | station + period, data = merged_data)
 summary(behaviour_reg_levels_lags, vcov = "hetero")
 
 # now include lags of the change in ridership as well
-behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | `Travel Location` + period, data = merged_data)
+# NICKELL BIAS?
+behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data)
 summary(behaviour_reg_levels_lags_taps, vcov = "hetero")
 
 # now regress the proportional change in ridership on the lagged proportional change in the imputed treatment effect, with fixed effects for station and month
-behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | `Travel Location` + period, data = merged_data)
+behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | station + period, data = merged_data)
 summary(behaviour_reg_prop, vcov = "hetero")
 
 # but this last one is a bit strange - proportional change of a log is very hard to interpret

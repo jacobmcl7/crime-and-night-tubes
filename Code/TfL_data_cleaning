@@ -87,12 +87,69 @@ write.csv(data, "TfL_ridership_data_cleaned.csv", row.names = FALSE)
 
 #######################################################################
 
-# now get some aggregated versions of this data
+# now get the total number of entries and exits (summed) for each station and month combo
 
-# first, the total number of entries and exits (summed) for each station, week combo
-station_weekly <- data %>%
+station_monthly <- data %>%
     group_by(`Travel Location`, Week) %>%
     summarise(Total_Taps = sum(`Count of Taps`))
 
+# now do some manual cleaning of the ridership data to match the naming conventions of the final dataset in the analysis file
+# from Claude, but checked (was originally done in the analysis file, side by side with the ATT data)
+station_name_mapping <- c(
+  # LU suffix removals / punctuation fixes
+  "Balham LU"                    = "Balham",
+  "Bethnal Green LU"             = "Bethnal Green",
+  "Brixton LU"                   = "Brixton",
+  "Charing Cross LU"             = "Charing Cross",
+  "Euston LU"                    = "Euston",
+  "Finsbury Park LU"             = "Finsbury Park",
+  "Liverpool Street LU"          = "Liverpool Street",
+  "London Bridge LU"             = "London Bridge",
+  "Vauxhall LU"                  = "Vauxhall",
+  "Victoria LU"                  = "Victoria",
+  "West Hampstead LU"            = "West Hampstead",
+  "Heathrow Terminal 5 LU"       = "Heathrow Terminal 5",
+  "Heathrow Terminals 123 LU"    = "Heathrow Terminals 1-2-3",
+
+  # Spelling / punctuation differences
+  "Earls Court"                  = "Earl's Court",
+  "Shepherds Bush LU"            = "Shepherd's Bush",
+  "St Johns Wood"                = "St. John's Wood",
+  "St Pauls"                     = "St. Paul's",
+  "Totteridge"                   = "Totteridge & Whetstone",
+  "Hammersmith D&P"              = "Hammersmith (Dist&Picc Line)",
+
+  # Multiple ridership entries → one ATT entry
+  "Canary Wharf LU (E1)"         = "Canary Wharf",
+  "Canary Wharf LU (E2)"         = "Canary Wharf",
+  "Kings Cross LU (North)"       = "King's Cross St. Pancras",
+  "Kings Cross LU (Tube)"        = "King's Cross St. Pancras",
+  "Kings Cross LU (Western)"     = "King's Cross St. Pancras",
+  "Waterloo LU (Jubilee)"        = "Waterloo"
+)
+
+# Apply the mapping to the original variable in the ridership data
+station_monthly <- station_monthly %>%
+  mutate(`Travel Location` = dplyr::recode(`Travel Location`, !!!station_name_mapping))
+
+# the only one from the ridership data that couldn't be matched was Heathrow Terminal 4 - just drop this at the right time
+
+# now clean the week variable to get it to match the period variable in the major dataset
+# extract the third and fourth character (corresponding to the month), and convert to numeric
+station_monthly <- station_monthly %>%
+  mutate(month = as.numeric(substr(Week, 3, 4))) %>%
+  # now convert to period variable, where period is month + 24 (i.e. month 1 of 2017 is period 25), and then group into two month periods to match the main dataset
+  mutate(period = month + 24) 
+
+# now get the average of Total_Taps for each station and period
+station_monthly <- station_monthly %>%
+  group_by(`Travel Location`, period) %>%
+  summarise(monthly_avg_taps = mean(Total_Taps)) %>%
+  ungroup()
+
+# finally, rename travel location to station to match the main dataset
+station_monthly <- station_monthly %>%
+  rename(station = `Travel Location`)
+
 # save this as a csv file
-write.csv(station_weekly, "TfL_station_weekly_ridership.csv", row.names = FALSE)
+write.csv(station_monthly, "TfL_station_monthly_ridership.csv", row.names = FALSE)
