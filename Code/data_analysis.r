@@ -1856,23 +1856,25 @@ merged_data <- panel(merged_data, ~ station + period)
 # also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
 
 # start by regressing the change in ridership, in levels, on the lagged change in the imputed treatment effect, with fixed effects for station and month
-behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | station + period, data = merged_data)
-summary(behaviour_reg_levels, vcov = "hetero")
+behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels)
 
 # now add more lags of the imputed treatment effect
-behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | station + period, data = merged_data)
-summary(behaviour_reg_levels_lags, vcov = "hetero")
+behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels_lags)
 
 # now include lags of the change in ridership as well
-# NICKELL BIAS?
-behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data)
-summary(behaviour_reg_levels_lags_taps, vcov = "hetero")
+# NICKELL BIAS? YES - SHOULD DO ARELLANO-BOND
+# this is just exploratory for now
+behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels_lags_taps)
 
 # now regress the proportional change in ridership on the lagged proportional change in the imputed treatment effect, with fixed effects for station and month
-behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | station + period, data = merged_data)
-summary(behaviour_reg_prop, vcov = "hetero")
+behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_prop)
 
 # but this last one is a bit strange - proportional change of a log is very hard to interpret
+# in fact in general this is hard to interpret - think of a nicer way to do this
 
 # now put them all in a latex table and export it
 # TO BE DONE
