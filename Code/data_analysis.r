@@ -1853,7 +1853,9 @@ merged_data <- panel(merged_data, ~ station + period)
 # now ready for regressions
 
 # Q: WHAT SEs TO USE?
+  # without lagged dep.vars, just cluster by station
 # also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
+  # Arellano-Bond for this
 
 # start by regressing the change in ridership, in levels, on the lagged change in the imputed treatment effect, with fixed effects for station and month
 behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | station + period, data = merged_data, cluster = ~ station)
