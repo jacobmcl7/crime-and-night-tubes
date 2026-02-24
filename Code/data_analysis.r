@@ -1869,6 +1869,25 @@ summary(behaviour_reg_levels_lags)
 behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_reg_levels_lags_taps)
 
+# do Arellano-Bond, with the plm package
+# first declare data as a pdata.frame (plm's panel format)
+merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
+
+# now use Arellano-Bond GMM estimator
+ab_reg <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(avg_TE, 1:3) |
+    lag(monthly_avg_taps, 2:10),  # instruments: deeper lags of the dependent variable
+  data = merged_pdata,
+  effect = "twoways",  # two-way fixed effects
+  model = "twosteps",
+  transformation = "d"  # Arellano-Bond
+)
+summary(ab_reg, robust = TRUE)  # robust SEs, recommended for two-step GMM
+# instruments invalid (AR(2) test)
+# also a general inverse is being used - covariance matrix near singular?
+# NEED TO THINK THROUGH THIS MORE CAREFULLY - DON'T JUST BLINDLY IMPLEMENT IT
+# maybe do system GMM (Blundell-Bond) as well?
+
 # now regress the proportional change in ridership on the lagged proportional change in the imputed treatment effect, with fixed effects for station and month
 behaviour_reg_prop <- feols(prop_change_avg_taps ~ fixest::l(prop_change_avg_TE, 1) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_reg_prop)
