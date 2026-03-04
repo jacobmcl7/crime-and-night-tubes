@@ -430,10 +430,12 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8,
 # allow the effect of all the controls to vary by month
 # don't include crime rank controls for now
 
-TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls <- feols(log_num_crimes ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = final_data, cluster = "location")
 
 # no longer negative definite covariance matrix!!
 # WORK OUT WHY
+# maybe too little variation left? Use yearly interactions maybe
+  # no - not helpful
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls, substring = "event_time_1")
@@ -459,7 +461,7 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
   event_time_var <- paste0("event_time_", dist)
   
-  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month")
+  formula_str <- paste0("log_num_crimes ~ i(", event_time_var, ", ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score)| location + Month")
   
   TWFE <- feols(as.formula(formula_str), data = final_data, cluster = "location")
   
@@ -481,7 +483,7 @@ for (dist in c(0.5, 0.75, 1.25)) {
 
 # 4b) now for thefts individually
 
-TWFE_1km_controls_theft <- feols(log_theft_from_the_person ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls_theft <- feols(log_theft_from_the_person ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls_theft, substring = "event_time_1")
@@ -502,7 +504,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_controls_theft.png", width
 
 # 4c) now for robberies individually
 
-TWFE_1km_controls_robbery <- feols(log_robbery ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = final_data, cluster = "location")
+TWFE_1km_controls_robbery <- feols(log_robbery ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = final_data, cluster = "location")
 
 # prepare the coefficients for plotting
 coefs <- plot_prepare(TWFE_1km_controls_robbery, substring = "event_time_1")
