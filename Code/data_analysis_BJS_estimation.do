@@ -9,6 +9,8 @@ replace first_treatment_1 = "" if first_treatment_1 == "Inf"
 destring first_treatment_1, replace
 
 
+
+
 *1) do a basic BJS estimation for the grand total of crimes
 
 *do the regression
@@ -16,6 +18,8 @@ did_imputation log_num_crimes location period first_treatment_1, allhorizons pre
 
 *save the coefficient vector and the SEs as a csv
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all.csv", cells("b se") plain replace noobs
+
+
 
 
 *2) do a BJS estimation for thefts only
@@ -27,6 +31,8 @@ did_imputation log_theft_from_the_person location period first_treatment_1, allh
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft.csv", cells("b se") plain replace noobs
 
 
+
+
 *3) do a BJS estimation for robberies only
 
 *do the regression
@@ -34,6 +40,20 @@ did_imputation log_robbery location period first_treatment_1, allhorizons pre(10
 
 *save the results
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_robbery.csv", cells("b se") plain replace noobs
+
+
+
+*4) do it for their sum
+
+*create the variable for the sum of thefts and robberies
+gen log_theft_and_robbery = log(theft_from_the_person + robbery + 1)
+
+*do the regression
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(10)
+
+*save the results
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery.csv", cells("b se") plain replace noobs
+
 
 
 
@@ -78,16 +98,8 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_al
 
 
 
-*5) do it for burglaries
 
-*do the regression
-did_imputation log_burglary location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
-
-*then save the coefficient vector
-esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_burglary.csv", cells("b se") plain replace noobs
-
-
-*6) loop over all other crime types and do the BJS estimation for each - first the basic one
+*5) loop over all other crime types and do the BJS estimation for each - first the basic one
 
 local crime_list "log_violence_and_sexual_offences log_antisocial_behaviour log_vehicle_crime log_other_theft log_burglary log_antisocial_behaviour log_shoplifting log_criminal_damage_and_arson log_other_crime log_possession_of_weapons log_bicycle_theft log_drugs log_public_order log_theft_from_the_person log_robbery"
 
@@ -102,7 +114,10 @@ foreach crime of local crime_list {
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_`crime'.csv", cells("b se") plain replace noobs
 }
 
-*7) now the wealth-differentiated one
+
+
+
+*6) now the wealth-differentiated one
 
 foreach crime of local crime_list {
     di "Doing wealth-differentiated BJS estimation for `crime'"
@@ -113,6 +128,68 @@ foreach crime of local crime_list {
     *save the coefficient vector and the SEs as a csv
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_`crime'.csv", cells("b se") plain replace noobs
 }
+
+
+
+
+*7) now do this for four distance bands between 0km and 1km, on log(thefts + robberies + 1)
+
+*generate the outcome variable
+gen log_theft_and_robbery = log(theft_from_the_person + robbery + 1)
+
+*destring the min_active_dist variable
+destring min_active_dist, replace force
+
+*first create indicators for each distance band, for the weights
+*the distance bands are 0m to 250m, 250m to 500m, 500m to 750m, and 750m to 1km
+gen band_0_250m = (min_active_dist <= 0.25)
+gen band_250_500m = (min_active_dist > 0.25 & min_active_dist <= 0.5)
+gen band_500_750m = (min_active_dist > 0.5 & min_active_dist <= 0.75)
+gen band_750_1000m = (min_active_dist > 0.75 & min_active_dist <= 1)
+
+*now loop through each of these bins, create weights for each post-period, and do the BJS estimation
+forvalues i = 1/4 {
+    local bin_var = ""
+    if `i' == 1 {
+        local bin_var = "band_0_250m"
+    }
+    else if `i' == 2 {
+        local bin_var = "band_250_500m"
+    }
+    else if `i' == 3 {
+        local bin_var = "band_500_750m"
+    }
+    else if `i' == 4 {
+        local bin_var = "band_750_1000m"
+    }
+    
+    *create weight vectors for this distance band
+    forvalues t = 0/16 {
+        qui gen W`t' = 0
+        qui replace W`t' = `bin_var' if event_time_1 == `t' & first_treatment_1 < .
+        
+        * Count observations where W equals 1
+        qui count if W`t' == 1
+        local sum_bin = r(N)
+        
+        * Normalize
+        qui replace W`t' = W`t' / `sum_bin' if first_treatment_1 < . & W`t' == 1
+    }
+    
+    *now do the BJS estimation for this distance band, for the thefts + robberies outcome
+    did_imputation log_theft_and_robbery location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
+    
+    *save the coefficient vector and the SEs as a csv
+    esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_distance_band_`i'.csv", cells("b se") plain replace noobs
+
+    *report when done
+    di "Done with distance band `i'"
+
+    *drop the weight variables before the next iteration
+    drop W0-W16
+}
+
+
 
 
 
