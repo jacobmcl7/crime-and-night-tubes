@@ -1091,7 +1091,7 @@ ggplot(coefs_all, aes(x = event_time)) +
   theme_bw()
 
 # save the graph
-ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_combined.png", width = 12, height = 8)
+ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_combined.png", width = 8, height = 6)
 
 
 
