@@ -940,6 +940,32 @@ plot(coefs = coefs,
 ggsave("Crime and night tubes/Output/Results/BJS_1km_robbery.png", width = 8, height = 6)
 
 
+####################################################################
+
+# 9d) now do TWFE for the sum of thefts and robberies
+
+# create the variable for the sum of thefts and robberies
+final_data <- final_data %>%
+  mutate(log_theft_and_robbery = log(theft_from_the_person + robbery + 1))
+
+# run the regression
+TWFE_1km_theft_and_robbery <- feols(log_theft_and_robbery ~ i(event_time_1, ref = -1) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs <- plot_prepare(TWFE_1km_theft_and_robbery, substring = "event_time_1")
+
+# plot the graph
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "Dynamic TWFE results - Theft and Robbery", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save it
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery.png", width = 8, height = 6)
+
+
 
 
 
@@ -1901,6 +1927,48 @@ summary(behaviour_reg_prop)
 
 # now put them all in a latex table and export it
 # TO BE DONE
+
+################################################################
+
+
+
+
+
+
+# 15) now get some quick statistics to inform analysis (here until a better place is found)
+
+# firstly, to inform about the magnitude of the treatment effect, get the mean number of pre-treatment crimes in each location (for the ever-treated locations)
+
+# first for robbery
+
+mean_robbery <- final_data %>%
+  filter(event_time_1 < 0 & first_treatment_1 != Inf) %>%
+  summarise(mean_robbery = mean(robbery))
+# 0.0431
+
+# calculate the rough treatment effect estimate
+
+robbery_ATT = ( 1 + mean_robbery[1,1] ) * ( exp(0.0125) - 1 )
+# 0.0131
+
+# now for theft from the person
+
+mean_theft_from_person <- final_data %>%
+  filter(event_time_1 < 0 & first_treatment_1 != Inf) %>%
+  summarise(mean_theft_from_person = mean(theft_from_the_person))
+# 0.1016
+
+# get rough TE estimate
+theft_from_person_ATT = ( 1 + mean_theft_from_person[1,1] ) * ( exp(0.0275) - 1 )
+# 0.0307
+
+
+# count the number of treated locations, for aggregation purposes
+num_treated_locations <- final_data %>%
+  filter(first_treatment_1 != Inf) %>%
+  summarise(num_treated = n_distinct(location))
+# 16545
+
 
 ################################################################################################
 ################################################################################################
