@@ -2052,6 +2052,103 @@ summary(behaviour_reg_prop)
 ################################################################
 
 
+# 14a) now try to do it with imputed raw counts, not log counts, and for thefts + robberies
+
+# first get the outcome variable ready
+final_data <- final_data %>%
+  mutate(theft_robbery = theft_from_the_person + robbery) %>%
+  mutate(log_theft_robbery = log(theft_robbery + 1))
+
+# get the imputed treatment effects
+
+# subset the data to pre-treatment observations, as before
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, log_theft_robbery)
+
+# do the regression
+TWFE_1km_total <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
+
+# get transformed fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_1km_total, newdata = final_data)
+final_data <- final_data %>%
+  mutate(transformed_residuals = log_theft_robbery - exp(fitted_vals) + 1)
+
+# we do this on 2017 data, so first drop all earlier years and untreated observations
+behaviour_data <- final_data %>%
+  filter(period >= 25) %>%  # i.e. from 2017 onwards
+  filter(event_time_1 >= 0)  # i.e. only treated observations
+
+# now do the station-level aggregation
+
+# split the data up by station, so that we have one row per station-month, with a column for the imputed treatment effect
+# then aggregate to get the average imputed treatment effect for all observations within 0.5km of each station, by month
+station_ATT_data <- behaviour_data %>%
+  # Split the comma-separated station names into one row per station
+  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
+  # Group by station and time period
+  group_by(stations_within_0.5km, period) %>%
+  summarise(avg_TE = mean(transformed_residuals)) %>%
+  ungroup() %>%
+  rename(station = stations_within_0.5km)
+
+# now we have two sets of station-level data, and we need to merge them
+# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4 (which was in the ridership data but not in the final data - work out why)
+# do this via an inner join, to drop unmatched stations on both sides (which will also drop Heathrow T4)
+merged_data <- ridership_data %>%
+  inner_join(
+    station_ATT_data,
+    by = c("station", "period")
+  )
+
+# correct number of observations in the merged dataset - only the 12 from Heathrow T4 were lost from the ridership data
+
+# now create a variable giving the proportional change in ridership compared to the previous period, for each station
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(period) %>%
+  mutate(prop_change_avg_taps = (monthly_avg_taps - lag(monthly_avg_taps)) / lag(monthly_avg_taps)) %>%
+  ungroup()
+# do the same for levels
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(period) %>%
+  mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
+  ungroup()
+
+# now do the same for proportional change in the imputed treatment effect
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(period) %>%
+  mutate(prop_change_avg_TE = (avg_TE - lag(avg_TE)) / lag(avg_TE)) %>%
+  ungroup()
+# do the same for levels
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(period) %>%
+  mutate(change_avg_TE = avg_TE - lag(avg_TE)) %>%
+  ungroup()
+
+# finally, declare the merged data as a panel
+merged_data <- panel(merged_data, ~ station + period)
+
+# now ready for regressions
+
+# start by regressing the change in ridership, in levels, on the lagged change in the imputed treatment effect, with fixed effects for station and month
+behaviour_reg_levels <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels)
+
+# now add more lags of the imputed treatment effect
+behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels_lags)
+
+# now include lags of the change in ridership as well
+# NICKELL BIAS? YES - SHOULD DO ARELLANO-BOND
+# this is just exploratory for now
+behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_reg_levels_lags_taps)
+
+
 
 
 
