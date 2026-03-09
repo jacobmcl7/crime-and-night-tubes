@@ -514,15 +514,16 @@ ggplot(mean_data_theft_robbery,
   geom_point(size = 1.5) +
   scale_color_manual(
     values = treatment_colors,
-    labels = c("20" = "Aug-2016", "22" = "Oct-2016", "23" = "Nov-2016",
-              "24" = "Dec-2016", "Inf" = "Never")
+    labels = c("Inf" = "Control", "20" = "Aug-2016", "22" = "Oct-2016", "23" = "Nov-2016",
+              "24" = "Dec-2016"),
+    breaks = c("Inf", "20", "22", "23", "24")
   ) +
   labs(
     title    = "Mean Thefts & Robberies Over Time",
     x        = "Month",
     y        = "Mean thefts & robberies",
-    color    = "First treatment\nperiod",
-    caption  = "Series shifted to have the same mean count from Jan-2015 to Jul-2016"
+    color    = "First treatment period",
+    caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
   ) +
   theme_bw()
 
@@ -532,8 +533,6 @@ ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time.png", 
 
 
 # now do the same as above, but split up the control groups
-
-# NEEDS TO BE FIXED!!
 
 # temporary - create a minimum distance to night tube variable that goes as far as 2km
 # do this via taking the min of min_nt_*_dist, for all such variables in the data
@@ -552,11 +551,9 @@ final_data <- final_data %>%
 final_data <- final_data %>%
   group_by(location) %>%
   mutate(group = ifelse(min_any_dist < 1, "<1km from non-NT", "1-2km from non-NT")) %>%
-  mutate(group = ifelse(any(min_nt_dist, na.rm = TRUE) < 2, "<2km of NT", group)) %>%
-  mutate(group = ifelse(any(min_nt_dist, na.rm = TRUE) < 1, as.character(first_treatment_1), group)) %>%
+  mutate(group = ifelse(max(!is.na(min_nt_dist) & min_nt_dist < 2), "<2km of NT", group)) %>%
+  mutate(group = ifelse(max(!is.na(min_nt_dist) & min_nt_dist < 1), as.character(first_treatment_1), group)) %>%
   ungroup()
-
-# THE ABOVE NEEDS FIXING - NOT GIVING THE RIGHT GROUPS!!
 
 # now do the same again
 # calculate monthly means of theft_robbery, by this grouping variable
@@ -596,28 +593,31 @@ ggplot(mean_data_theft_robbery,
       "22"                = "#F4B8C1",  # pastel pink
       "23"                = "#A8DDB5",  # pastel green
       "24"                = "#F9D8A0",  # pastel yellow
-      "<2km of NT"        = "#FAD4D4",  # light red
-      "<1km from non-NT"   = "#D3E4CD",  # light green
-      "1-2km from non-NT"  = "#E6E6E6"   # light grey
+      "<2km of NT"        = "#1B4F72",  # navy
+      "<1km from non-NT"   = "#1D6A39",  # green
+      "1-2km from non-NT"  = "#7B2D00"   # maroon
     ),
     labels = c(
       "20"                = "Aug-2016",
       "22"                = "Oct-2016",
       "23"                = "Nov-2016",
       "24"                = "Dec-2016",
-      "<2km of NT"        = "<2km of NT station",
-      "<1km from non-NT"   = "<1km from non-NT station",
-      "1-2km from non-NT"  = "1-2km from non-NT station"
+      "<2km of NT"        = "Control: <2km of NT station",
+      "<1km from non-NT"   = "Control: <1km from non-NT station",
+      "1-2km from non-NT"  = "Control: 1-2km from non-NT station"
     )
   ) +
   labs(
     title    = "Mean Thefts & Robberies Over Time by Group",
     x        = "Month",
     y        = "Mean thefts & robberies",
-    color    = "Group",
-    caption  = "Series shifted to have the same mean count from Jan-2015 to Jul-2016"
+    color    = "First treatment period",
+    caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
   ) +
   theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg.png", width = 8, height = 6)
 
 
 ############################################################
