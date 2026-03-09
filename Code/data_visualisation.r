@@ -469,6 +469,8 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 # now plot the evolution of the mean of the count of thefts and robberies
 
+# NOTE: NEED TO REMOVE 'TREATMENT WINDOW' AND CONVERT PERIOD TO MONTHS
+
 # first generate the thefts + robberies variable
 final_data <- final_data %>%
   mutate(theft_robbery = robbery + theft_from_the_person)
@@ -619,8 +621,17 @@ ggplot(mean_data_theft_robbery,
 # save it
 ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg.png", width = 8, height = 6)
 
-
 ############################################################
+
+
+
+
+
+
+
+
+
+
 
 # now get a summary table for the crime stats
 
