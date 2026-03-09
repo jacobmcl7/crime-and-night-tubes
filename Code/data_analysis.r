@@ -2103,16 +2103,11 @@ merged_data <- ridership_data %>%
 
 # correct number of observations in the merged dataset - only the 12 from Heathrow T4 were lost from the ridership data
 
-# now create a variable giving the proportional change in ridership compared to the previous period, for each station
+# now create a variable giving the proportional and the level change in ridership compared to the previous period, for each station
 merged_data <- merged_data %>%
   group_by(station) %>%
   arrange(period) %>%
   mutate(prop_change_avg_taps = (monthly_avg_taps - lag(monthly_avg_taps)) / lag(monthly_avg_taps)) %>%
-  ungroup()
-# do the same for levels
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(period) %>%
   mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
   ungroup()
 
@@ -2121,11 +2116,6 @@ merged_data <- merged_data %>%
   group_by(station) %>%
   arrange(period) %>%
   mutate(prop_change_avg_TE = (avg_TE - lag(avg_TE)) / lag(avg_TE)) %>%
-  ungroup()
-# do the same for levels
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(period) %>%
   mutate(change_avg_TE = avg_TE - lag(avg_TE)) %>%
   ungroup()
 
@@ -2143,10 +2133,11 @@ behaviour_reg_levels_lags <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1)
 summary(behaviour_reg_levels_lags)
 
 # now include lags of the change in ridership as well
-# NICKELL BIAS? YES - SHOULD DO ARELLANO-BOND
-# this is just exploratory for now
+# SHOULD DO ARELLANO-BOND: this is just exploratory for now
 behaviour_reg_levels_lags_taps <- feols(change_avg_taps ~ fixest::l(change_avg_TE, 1) + fixest::l(change_avg_TE, 2) + fixest::l(change_avg_TE, 3) + fixest::l(change_avg_taps, 1) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_reg_levels_lags_taps)
+
+#########################################################
 
 
 
