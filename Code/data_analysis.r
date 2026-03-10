@@ -1945,7 +1945,10 @@ final_data <- final_data %>%
   mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
   mutate(residuals = log_theft_robbery - fitted_vals) %>%
   mutate(fitted_poisson = predict(first_stage_Poisson, newdata = final_data)) %>%
-  mutate(residuals_poisson = theft_robbery - fitted_poisson)
+  mutate(residuals_poisson = theft_robbery - fitted_poisson) %>%
+  mutate(residuals_imputed = theft_robbery - exp(fitted_vals) + 1)
+
+# also impute levels TEs from log regression? Maybe subject to same issue as Poisson, but worth doing
 
 # we do the following analysis on 2017 data, so first drop all earlier years and untreated observations
 behaviour_data <- final_data %>%
@@ -1962,7 +1965,7 @@ station_ATT_data <- behaviour_data %>%
   # Group by station and time period
   group_by(stations_within_0.5km, period) %>%
   # Calculate sums of the imputed treatment effects (i.e. the residuals) for each station-month combo
-  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE)) %>% # we have to remove NAs here for Poisson!!
+  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
   ungroup() %>%
   rename(station = stations_within_0.5km)
 
@@ -2006,6 +2009,7 @@ merged_data <- merged_data %>%
   arrange(period) %>%
   mutate(change_sum_TE_logs = sum_TE_logs - lag(sum_TE_logs)) %>%
   mutate(change_sum_TE_poisson = sum_TE_poisson - lag(sum_TE_poisson)) %>%
+  mutate(change_sum_TE_imputed = sum_TE_imputed - lag(sum_TE_imputed)) %>%
   ungroup()
 
 # reattach plm
@@ -2042,7 +2046,17 @@ summary(behaviour_poisson_2lag)
 behaviour_poisson_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_poisson, 1) + fixest::l(change_sum_TE_poisson, 2) + fixest::l(change_sum_TE_poisson, 3) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_poisson_3lag)
 
-# I think this should be proportional change maybe? Or find controls
+# I think this should be proportional change maybe? Or find controls? What is the issue here?
+
+# now do it for the sum of imputed TEs from the log regression
+behaviour_imputed_1lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_1lag)
+
+behaviour_imputed_2lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_2lag)
+
+behaviour_imputed_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) + fixest::l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_3lag)
 
 # do Arellano-Bond for log TEs
 merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
@@ -2058,7 +2072,7 @@ summary(ab_reg_logs, robust = TRUE)
 
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(
-  monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_Poisson, 1:3) |
+  monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_poisson, 1:3) |
     plm::lag(monthly_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
   data = merged_pdata,
   effect = "twoways",  # two-way fixed effects
@@ -2066,6 +2080,19 @@ ab_reg_poisson <- pgmm(
   transformation = "d"  # Arellano-Bond
 )
 summary(ab_reg_poisson, robust = TRUE)
+
+# now do it for imputed TEs
+ab_reg_imputed <- pgmm(
+  monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_imputed, 1:3) |
+    plm::lag(monthly_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
+  data = merged_pdata,
+  effect = "twoways",  # two-way fixed effects
+  model = "twosteps",
+  transformation = "d"  # Arellano-Bond
+)
+summary(ab_reg_imputed, robust = TRUE)
+
+# should maybe use fewer lags, given short time series?
 
 #########################################################################
 
