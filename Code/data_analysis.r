@@ -2073,26 +2073,119 @@ summary(ab_reg_logs, robust = TRUE)
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_poisson, 1:3) |
-    plm::lag(monthly_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
+    plm::lag(monthly_avg_taps, 2:5),
   data = merged_pdata,
-  effect = "twoways",  # two-way fixed effects
+  effect = "twoways",
   model = "twosteps",
-  transformation = "d"  # Arellano-Bond
+  transformation = "d"
 )
 summary(ab_reg_poisson, robust = TRUE)
 
 # now do it for imputed TEs
 ab_reg_imputed <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_imputed, 1:3) |
-    plm::lag(monthly_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
+    plm::lag(monthly_avg_taps, 2:5),
   data = merged_pdata,
-  effect = "twoways",  # two-way fixed effects
+  effect = "twoways",
   model = "twosteps",
-  transformation = "d"  # Arellano-Bond
+  transformation = "d"
 )
 summary(ab_reg_imputed, robust = TRUE)
 
 # should maybe use fewer lags, given short time series?
+
+# generate a regression table
+library(texreg)
+
+# ── Custom extractor for pgmm models ─────────────────────────────────────────
+extract.pgmm <- function(model, robust = TRUE, ...) {
+  s <- summary(model, robust = robust)
+  coefs <- s$coefficients
+  createTexreg(
+    coef.names  = rownames(coefs),
+    coef        = coefs[, "Estimate"],
+    se          = coefs[, "Std. Error"],
+    pvalues     = coefs[, "Pr(>|z|)"],
+    gof.names   = c("Sargan test p", "AR(1) p", "AR(2) p", "N"),
+    gof         = c(
+      s$sargan$p.value,
+      s$m1$p.value,
+      s$m2$p.value,
+      as.integer(pdim(model)$nT$N)
+    ),
+    gof.decimal = c(TRUE, TRUE, TRUE, FALSE)
+  )
+}
+
+# ── Extract feols models (texreg supports these natively) ─────────────────────
+feols_models <- list(
+  behaviour_logs_1lag,
+  behaviour_logs_2lag,
+  behaviour_logs_3lag,
+  behaviour_imputed_1lag,
+  behaviour_imputed_2lag,
+  behaviour_imputed_3lag
+)
+
+# ── Extract pgmm models using custom extractor ────────────────────────────────
+pgmm_logs    <- extract.pgmm(ab_reg_logs,    robust = TRUE)
+pgmm_imputed <- extract.pgmm(ab_reg_imputed, robust = TRUE)
+
+# ── Combine all models in desired column order ────────────────────────────────
+all_models <- list(
+  behaviour_logs_1lag,    # feols - native support
+  behaviour_logs_2lag,
+  behaviour_logs_3lag,
+  pgmm_logs,              # pgmm - custom extracted
+  behaviour_imputed_1lag,
+  behaviour_imputed_2lag,
+  behaviour_imputed_3lag,
+  pgmm_imputed
+)
+
+# ── Rename coefficients for readability ───────────────────────────────────────
+coef_map <- list(
+  # feols lag notation
+  "fixest::l(change_sum_TE_logs, 1)"     = "TE (logs), lag 1",
+  "fixest::l(change_sum_TE_logs, 2)"     = "TE (logs), lag 2",
+  "fixest::l(change_sum_TE_logs, 3)"     = "TE (logs), lag 3",
+  "fixest::l(change_sum_TE_imputed, 1)"  = "TE (imputed), lag 1",
+  "fixest::l(change_sum_TE_imputed, 2)"  = "TE (imputed), lag 2",
+  "fixest::l(change_sum_TE_imputed, 3)"  = "TE (imputed), lag 3",
+  # pgmm lag notation
+  "plm::lag(monthly_avg_taps, 1)"        = "Avg. taps, lag 1 (AB)",
+  "plm::lag(sum_TE_logs, 1:3)1"             = "TE (logs), lag 1",
+  "plm::lag(sum_TE_logs, 1:3)2"             = "TE (logs), lag 2",
+  "plm::lag(sum_TE_logs, 1:3)3"             = "TE (logs), lag 3",
+  "plm::lag(sum_TE_imputed, 1:3)1"          = "TE (imputed), lag 1",
+  "plm::lag(sum_TE_imputed, 1:3)2"          = "TE (imputed), lag 2",
+  "plm::lag(sum_TE_imputed, 1:3)3"          = "TE (imputed), lag 3"
+)
+
+# ── Export to LaTeX ───────────────────────────────────────────────────────────
+texreg(
+  all_models,
+  fontsize = "footnotesize",
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions.tex",
+  custom.model.names = c(
+    "\\shortstack{(1)\\\\Logs,\\\\1 lag}",
+    "\\shortstack{(2)\\\\Logs,\\\\2 lags}",
+    "\\shortstack{(3)\\\\Logs,\\\\3 lags}",
+    "\\shortstack{(4)\\\\Logs,\\\\AB}",
+    "\\shortstack{(5)\\\\Imputed,\\\\1 lag}",
+    "\\shortstack{(6)\\\\Imputed,\\\\2 lags}",
+    "\\shortstack{(7)\\\\Imputed,\\\\3 lags}",
+    "\\shortstack{(8)\\\\Imputed,\\\\AB}"
+  ),
+  custom.coef.map    = coef_map,
+  stars              = c(0.01, 0.05, 0.1),
+  caption            = "Effect of Treatment on Ridership Behaviour",
+  label              = "tab:behaviour",
+  booktabs           = TRUE,        # cleaner LaTeX table style
+  dcolumn            = TRUE,        # align on decimal point
+  use.packages       = FALSE,       # don't auto-add \usepackage{} (manage in your .tex file)
+  caption.above      = TRUE
+)
 
 #########################################################################
 

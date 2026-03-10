@@ -1,0 +1,42 @@
+
+\begin{table}
+\caption{Effect of Treatment on Ridership Behaviour}
+\begin{center}
+\begin{footnotesize}
+\begin{tabular}{l D{.}{.}{4.5} D{.}{.}{4.5} D{.}{.}{4.5} D{.}{.}{4.5} D{.}{.}{4.5} D{.}{.}{4.4} D{.}{.}{4.3} D{.}{.}{4.5}}
+\toprule
+ & \multicolumn{1}{c}{\shortstack{(1)\\Logs,\\1 lag}} & \multicolumn{1}{c}{\shortstack{(2)\\Logs,\\2 lags}} & \multicolumn{1}{c}{\shortstack{(3)\\Logs,\\3 lags}} & \multicolumn{1}{c}{\shortstack{(4)\\Logs,\\AB}} & \multicolumn{1}{c}{\shortstack{(5)\\Imputed,\\1 lag}} & \multicolumn{1}{c}{\shortstack{(6)\\Imputed,\\2 lags}} & \multicolumn{1}{c}{\shortstack{(7)\\Imputed,\\3 lags}} & \multicolumn{1}{c}{\shortstack{(8)\\Imputed,\\AB}} \\
+\midrule
+TE (logs), lag 1        & -33.09^{***} & -32.85^{***} & -29.63^{***} & -23.14^{***} &              &             &            &              \\
+                        & (9.68)       & (10.65)      & (10.82)      & (7.09)       &              &             &            &              \\
+TE (logs), lag 2        &              & 0.96         & 4.68         & -12.17       &              &             &            &              \\
+                        &              & (11.57)      & (16.46)      & (7.96)       &              &             &            &              \\
+TE (logs), lag 3        &              &              & 14.53        & 17.51^{***}  &              &             &            &              \\
+                        &              &              & (13.32)      & (6.41)       &              &             &            &              \\
+TE (imputed), lag 1     &              &              &              &              & -15.59^{***} & -16.12^{**} & -13.58^{*} & -12.46^{***} \\
+                        &              &              &              &              & (5.73)       & (7.20)      & (7.42)     & (4.04)       \\
+TE (imputed), lag 2     &              &              &              &              &              & -1.20       & 2.38       & -3.66        \\
+                        &              &              &              &              &              & (6.22)      & (8.43)     & (4.01)       \\
+TE (imputed), lag 3     &              &              &              &              &              &             & 9.48       & 16.55^{***}  \\
+                        &              &              &              &              &              &             & (6.59)     & (3.07)       \\
+Avg. taps, lag 1 (AB)   &              &              &              & -0.24^{***}  &              &             &            & -0.25^{***}  \\
+                        &              &              &              & (0.01)       &              &             &            & (0.01)       \\
+\midrule
+Num. obs.               & 1455         & 1309         & 1163         &              & 1455         & 1309        & 1163       &              \\
+Num. groups: station    & 146          & 146          & 146          &              & 146          & 146         & 146        &              \\
+Num. groups: period     & 10           & 9            & 8            &              & 10           & 9           & 8          &              \\
+R$^2$ (full model)      & 0.36         & 0.37         & 0.36         &              & 0.36         & 0.37        & 0.36       &              \\
+R$^2$ (proj model)      & 0.01         & 0.01         & 0.01         &              & 0.01         & 0.01        & 0.02       &              \\
+Adj. R$^2$ (full model) & 0.28         & 0.28         & 0.26         &              & 0.29         & 0.28        & 0.26       &              \\
+Adj. R$^2$ (proj model) & 0.01         & 0.01         & 0.01         &              & 0.01         & 0.01        & 0.01       &              \\
+Sargan test p           &              &              &              & 0.00         &              &             &            & 0.00         \\
+AR(1) p                 &              &              &              & 0.09         &              &             &            & 0.10         \\
+AR(2) p                 &              &              &              & 0.00         &              &             &            & 0.00         \\
+N                       &              &              &              & 1748         &              &             &            & 1748         \\
+\bottomrule
+\multicolumn{9}{l}{\tiny{$^{***}p<0.01$; $^{**}p<0.05$; $^{*}p<0.1$}}
+\end{tabular}
+\end{footnotesize}
+\label{tab:behaviour}
+\end{center}
+\end{table}
