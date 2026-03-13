@@ -2070,6 +2070,22 @@ ab_reg_logs <- pgmm(
 )
 summary(ab_reg_logs, robust = TRUE)
 
+# try to correct this
+merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
+ab_reg_logs <- pgmm(
+  change_avg_taps ~ plm::lag(change_avg_taps, 1) + plm::lag(change_sum_TE_logs, 1) |
+    plm::lag(change_avg_taps, 2),  # instruments: deeper lags of the dependent variable
+  data = merged_pdata,
+  effect = "individual",  # two-way fixed effects
+  model = "twosteps",
+  transformation = "d"  # Arellano-Bond
+)
+summary(ab_reg_logs, robust = TRUE)
+
+# why is the system computationally singular? it is the introduction of twoway FEs - the introduction of time dummies leads to multicollinearity
+# there must be something else that is unit-invariant
+# also even without TWFEs the inverses in first and second stage are singular - why?
+
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_poisson, 1:3) |
