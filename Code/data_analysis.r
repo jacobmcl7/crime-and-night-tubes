@@ -2059,6 +2059,7 @@ behaviour_imputed_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_impute
 summary(behaviour_imputed_3lag)
 
 # do Arellano-Bond for log TEs
+# NOTE - SHOULD BE IN DIFFERENCES!!
 merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
 ab_reg_logs <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_logs, 1:3) |
@@ -2074,7 +2075,7 @@ summary(ab_reg_logs, robust = TRUE)
 merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
 ab_reg_logs <- pgmm(
   change_avg_taps ~ plm::lag(change_avg_taps, 1) + plm::lag(change_sum_TE_logs, 1) |
-    plm::lag(change_avg_taps, 2),  # instruments: deeper lags of the dependent variable
+    plm::lag(change_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
   data = merged_pdata,
   effect = "individual",  # two-way fixed effects
   model = "twosteps",
@@ -2085,6 +2086,7 @@ summary(ab_reg_logs, robust = TRUE)
 # why is the system computationally singular? it is the introduction of twoway FEs - the introduction of time dummies leads to multicollinearity
 # there must be something else that is unit-invariant
 # also even without TWFEs the inverses in first and second stage are singular - why?
+# note that when we use just one lag, the AR(2) test is insignificant, as required - gets worse with more lags
 
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(
