@@ -2095,6 +2095,25 @@ summary(ab_reg_logs, robust = TRUE)
 # note that when we use just one lag, the AR(2) test is insignificant, as required - gets worse with more lags
 # also adding levels of the dependent variable introduces singluarity too
 
+# Anderson-Hsiao - do it manually with TWFE
+# if not, just do it no changes
+
+# anderson-hsiao
+model <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(model, stage = 1:2)
+
+# anderson-hsiao for imputed TEs
+model_imputed <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(model_imputed, stage = 1:2)
+
+
+
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_poisson, 1:3) |
