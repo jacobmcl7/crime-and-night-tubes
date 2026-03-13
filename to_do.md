@@ -1,11 +1,14 @@
 to do list:
 
 next things to do:
- - cluster BJS SEs
+ - cluster BJS SEs, do Conley SEs
+   - should really do Conley SEs in BJS, but hard
+   - instead, just cluster by broad geographical area (e.g. MSOA), and report results for different cluster levels
+   - then report in appendix the TWFE results with Conley SEs for various kernels
+
+ - sort out the issues with Arellano-Bond estimation of the behaviour effect
 
  - work out what to do with controls
-
- - do Conley SEs
 
  - Poisson graphing wrong? check intercept at et = -1
 

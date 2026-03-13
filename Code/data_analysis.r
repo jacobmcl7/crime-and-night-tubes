@@ -2087,6 +2087,7 @@ summary(ab_reg_logs, robust = TRUE)
 # there must be something else that is unit-invariant
 # also even without TWFEs the inverses in first and second stage are singular - why?
 # note that when we use just one lag, the AR(2) test is insignificant, as required - gets worse with more lags
+# also adding levels of the dependent variable introduces singluarity too
 
 # now do it for Poisson TEs
 ab_reg_poisson <- pgmm(

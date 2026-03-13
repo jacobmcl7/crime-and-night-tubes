@@ -54,6 +54,7 @@ did_imputation log_theft_and_robbery location period first_treatment_1, allhoriz
 *save the results
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery.csv", cells("b se") plain replace noobs
 
+*should cluster - e.g. by msoa
 
 
 
