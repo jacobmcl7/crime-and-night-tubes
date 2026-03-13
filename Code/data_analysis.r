@@ -976,7 +976,7 @@ coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_resu
 
 # plot the results
 plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
+    xsequence = seq(-20, 15, 5),
     ymin = -0.1,
     ymax = 0.1,
     title = "BJS (2024) - Theft and Robbery", 
@@ -1253,7 +1253,9 @@ TWFE_1km_poisson <- etwfe(
 coefs <- as.data.frame(emfx(TWFE_1km_poisson, type = "event")) %>%
   rename(event_time = event) %>%
   rename(coef = estimate) %>%
-  rename(se = std.error)
+  rename(se = std.error) %>%
+  # add one at event time -1, with coef = 0 and se = 0, to represent the omitted category
+  add_row(event_time = -1, coef = 0, se = 0)
 
 # plot the graph
 plot(coefs = coefs, 
@@ -1286,7 +1288,9 @@ TWFE_1km_poisson_theft <- etwfe(
 coefs <- as.data.frame(emfx(TWFE_1km_poisson_theft, type = "event")) %>%
   rename(event_time = event) %>%
   rename(coef = estimate) %>%
-  rename(se = std.error)
+  rename(se = std.error) %>%
+  # add one at event time -1, with coef = 0 and se = 0, to represent the omitted category
+  add_row(event_time = -1, coef = 0, se = 0)
 
 # plot the graph
 plot(coefs = coefs, 
@@ -1319,7 +1323,9 @@ TWFE_1km_poisson_robbery <- etwfe(
 coefs <- as.data.frame(emfx(TWFE_1km_poisson_robbery, type = "event")) %>%
   rename(event_time = event) %>%
   rename(coef = estimate) %>%
-  rename(se = std.error)
+  rename(se = std.error) %>%
+  # add one at event time -1, with coef = 0 and se = 0, to represent the omitted category
+  add_row(event_time = -1, coef = 0, se = 0)
 
 # plot the graph
 plot(coefs = coefs, 
