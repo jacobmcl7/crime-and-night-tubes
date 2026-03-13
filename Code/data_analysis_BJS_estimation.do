@@ -14,7 +14,7 @@ destring first_treatment_1, replace
 *1) do a basic BJS estimation for the grand total of crimes
 
 *do the regression
-did_imputation log_num_crimes location period first_treatment_1, allhorizons pre(10)
+did_imputation log_num_crimes location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm)
 
 *save the coefficient vector and the SEs as a csv
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all.csv", cells("b se") plain replace noobs
@@ -25,10 +25,10 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all.csv",
 *2) do a BJS estimation for thefts only
 
 *do the regression
-did_imputation log_theft_from_the_person location period first_treatment_1, allhorizons pre(10)
+/* did_imputation log_theft_from_the_person location period first_treatment_1, allhorizons pre(10) */
 
 *save the results
-esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft.csv", cells("b se") plain replace noobs
+/* esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft.csv", cells("b se") plain replace noobs */
 
 
 
@@ -36,7 +36,7 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft.csv
 *3) do a BJS estimation for robberies only
 
 *do the regression
-did_imputation log_robbery location period first_treatment_1, allhorizons pre(10)
+did_imputation log_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm)
 
 *save the results
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_robbery.csv", cells("b se") plain replace noobs
@@ -49,12 +49,10 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_robbery.c
 gen log_theft_and_robbery = log(theft_from_the_person + robbery + 1)
 
 *do the regression
-did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(10)
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm)
 
 *save the results
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery.csv", cells("b se") plain replace noobs
-
-*should cluster - e.g. by msoa
 
 
 
@@ -92,7 +90,7 @@ forvalues t = 0/16 {
 }
 
 *now use them in the BJS estimation
-did_imputation log_num_crimes location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
+did_imputation log_num_crimes location period first_treatment_1, pre(20) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum cluster(msoa21nm)
 
 *then save the coefficient vector
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_all.csv", cells("b se") plain replace noobs
@@ -109,7 +107,7 @@ foreach crime of local crime_list {
     di "Doing BJS estimation for `crime'"
     
     *basic BJS estimation
-    did_imputation `crime' location period first_treatment_1, allhorizons pre(10)
+    did_imputation `crime' location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm)
     
     *save the coefficient vector and the SEs as a csv
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_`crime'.csv", cells("b se") plain replace noobs
@@ -124,7 +122,7 @@ foreach crime of local crime_list {
     di "Doing wealth-differentiated BJS estimation for `crime'"
     
     *wealth-differentiated BJS estimation
-    did_imputation `crime' location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
+    did_imputation `crime' location period first_treatment_1, pre(20) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum cluster(msoa21nm)
     
     *save the coefficient vector and the SEs as a csv
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_wealth_`crime'.csv", cells("b se") plain replace noobs
@@ -178,7 +176,7 @@ forvalues i = 1/4 {
     }
     
     *now do the BJS estimation for this distance band, for the thefts + robberies outcome
-    did_imputation log_theft_and_robbery location period first_treatment_1, pre(10) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum
+    did_imputation log_theft_and_robbery location period first_treatment_1, pre(20) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum cluster(msoa21nm)
     
     *save the coefficient vector and the SEs as a csv
     esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_distance_band_`i'.csv", cells("b se") plain replace noobs
@@ -221,15 +219,15 @@ egen id = group(closest_station_n within_1km)
 
 *now do the regression
 *have to use autosample to get it to work
-did_imputation log_num_crimes id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+did_imputation log_num_crimes id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(20) autosample cluster(msoa21nm)
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_all.csv", cells("b se") plain replace noobs
 
 *same for specific crimes: first robbery
-did_imputation log_robbery id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+did_imputation log_robbery id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(20) autosample cluster(msoa21nm)
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_robbery.csv", cells("b se") plain replace noobs
 
 *now theft
-did_imputation log_theft_from_the_person id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(10) autosample
+did_imputation log_theft_from_the_person id period first_treatment_1, fe(id within_1km#period closest_station_n#period) allhorizons pre(20) autosample cluster(msoa21nm)
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_triple_theft.csv", cells("b se") plain replace noobs
 
 
