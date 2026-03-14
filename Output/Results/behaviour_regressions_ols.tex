@@ -1,0 +1,38 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:ols_results} OLS: Effect of lagged treatment intensity on ridership changes}
+   \centering
+   \begin{tabular}{lcccccc}
+      \tabularnewline \midrule \midrule
+      Dependent Variable: & \multicolumn{6}{c}{change\_avg\_taps}\\
+                                                  & Log (1)        & Log (2)        & Log (3)        & Imputed (1)    & Imputed (2)   & Imputed (3) \\   
+      Model:                                      & (1)            & (2)            & (3)            & (4)            & (5)           & (6)\\  
+      \midrule
+      \emph{Variables}\\
+      fixest $=$ l(change\_sum\_TE\_logs,1)       & -33.09$^{***}$ & -32.85$^{***}$ & -29.63$^{***}$ &                &               &   \\   
+                                                  & (9.681)        & (10.65)        & (10.82)        &                &               &   \\   
+      fixest $=$ l(change\_sum\_TE\_logs,2)       &                & 0.9584         & 4.678          &                &               &   \\   
+                                                  &                & (11.57)        & (16.46)        &                &               &   \\   
+      fixest $=$ l(change\_sum\_TE\_logs,3)       &                &                & 14.53          &                &               &   \\   
+                                                  &                &                & (13.32)        &                &               &   \\   
+      fixest $=$ l(change\_sum\_TE\_imputed,1)    &                &                &                & -15.59$^{***}$ & -16.12$^{**}$ & -13.58$^{*}$\\   
+                                                  &                &                &                & (5.728)        & (7.203)       & (7.415)\\   
+      fixest $=$ l(change\_sum\_TE\_imputed,2)    &                &                &                &                & -1.201        & 2.385\\   
+                                                  &                &                &                &                & (6.222)       & (8.426)\\   
+      fixest $=$ l(change\_sum\_TE\_imputed,3)    &                &                &                &                &               & 9.484\\   
+                                                  &                &                &                &                &               & (6.593)\\   
+      \midrule
+      \emph{Fixed-effects}\\
+      station                                     & Yes            & Yes            & Yes            & Yes            & Yes           & Yes\\  
+      period                                      & Yes            & Yes            & Yes            & Yes            & Yes           & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      R$^2$                                       & 0.36006        & 0.36643        & 0.35889        & 0.36325        & 0.36950       & 0.36270\\  
+      Observations                                & 1,455          & 1,309          & 1,163          & 1,455          & 1,309         & 1,163\\  
+      \midrule \midrule
+      \multicolumn{7}{l}{\emph{Clustered (station) standard-errors in parentheses}}\\
+      \multicolumn{7}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+

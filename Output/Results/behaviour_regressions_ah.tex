@@ -1,0 +1,33 @@
+
+\begin{table}[htbp]
+   \caption{\label{tab:ah_results} Anderson-Hsiao IV estimates}
+   \centering
+   \begin{tabular}{lcc}
+      \tabularnewline \midrule \midrule
+      Dependent Variable: & \multicolumn{2}{c}{change\_avg\_taps}\\
+                                                  & AH: Log        & AH: Imputed \\   
+      Model:                                      & (1)            & (2)\\  
+      \midrule
+      \emph{Variables}\\
+      l(change\_avg\_taps,1)                      & 0.5361$^{***}$ & 0.5285$^{***}$\\   
+                                                  & (0.1606)       & (0.1684)\\   
+      l(change\_sum\_TE\_logs,1)                  & -51.09$^{***}$ &   \\   
+                                                  & (18.62)        &   \\   
+      l(change\_sum\_TE\_imputed,1)               &                & -22.10$^{**}$\\   
+                                                  &                & (11.06)\\   
+      \midrule
+      \emph{Fixed-effects}\\
+      station                                     & Yes            & Yes\\  
+      period                                      & Yes            & Yes\\  
+      \midrule
+      \emph{Fit statistics}\\
+      R$^2$                                       & 0.42030        & 0.42245\\  
+      Observations                                & 1,454          & 1,454\\  
+      Wald (1st stage), l(change\_avg\_taps, 1)   & 211.90         & 192.27\\  
+      \midrule \midrule
+      \multicolumn{3}{l}{\emph{Clustered (station) standard-errors in parentheses}}\\
+      \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+   \end{tabular}
+\end{table}
+
+

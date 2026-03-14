@@ -2042,6 +2042,16 @@ summary(behaviour_logs_2lag)
 behaviour_logs_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_logs, 1) + fixest::l(change_sum_TE_logs, 2) + fixest::l(change_sum_TE_logs, 3) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_logs_3lag)
 
+# now do it for the sum of imputed TEs from the log regression
+behaviour_imputed_1lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_1lag)
+
+behaviour_imputed_2lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_2lag)
+
+behaviour_imputed_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) + fixest::l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_3lag)
+
 # now do it for the sum of Poisson TEs (again without LDVs)
 behaviour_poisson_1lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_poisson, 1) | station + period, data = merged_data, cluster = ~ station)
 summary(behaviour_poisson_1lag)
@@ -2054,18 +2064,62 @@ summary(behaviour_poisson_3lag)
 
 # I think this should be proportional change maybe? Or find controls? What is the issue here?
 
-# now do it for the sum of imputed TEs from the log regression
-behaviour_imputed_1lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_1lag)
+# do Anderson-Hsiao for log TEs
+as_reg_logs <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
 
-behaviour_imputed_2lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_2lag)
+summary(as_reg_logs, stage = 1:2)
 
-behaviour_imputed_3lag <- feols(change_avg_taps ~ fixest::l(change_sum_TE_imputed, 1) + fixest::l(change_sum_TE_imputed, 2) + fixest::l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_3lag)
+# do Anderson-Hsiao for imputed TEs
+as_reg_imputed <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(as_reg_imputed, stage = 1:2)
+
+# do Anderson-Hsiao for Poisson TEs
+as_reg_poisson <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(as_reg_poisson, stage = 1:2)
+
+
+# make a regression table for these
+
+# OLS table
+etable(
+  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag,
+  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag,
+  headers = c("Log (1)", "Log (2)", "Log (3)",
+              "Imputed (1)", "Imputed (2)", "Imputed (3)"),
+  tex = TRUE,
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_ols.tex",
+  fitstat = ~ r2 + n,
+  title = "OLS: Effect of lagged treatment intensity on ridership changes",
+  label = "tab:ols_results"
+)
+
+# IV table
+etable(
+  as_reg_logs, as_reg_imputed,
+  headers = c("AH: Log", "AH: Imputed"),
+  tex = TRUE,
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_ah.tex",
+  fitstat = ~ r2 + n + ivwald,
+  title = "Anderson-Hsiao IV estimates",
+  label = "tab:ah_results"
+)
+
+
+
+
+##### BELOW IS REDUNDANT UNLESS WE DO ARELLANO BOND
+
 
 # do Arellano-Bond for log TEs
-# NOTE - SHOULD BE IN DIFFERENCES!!
+# NOTE - SHOULD BE IN DIFFERENCES!! ALL OF THESE ARE WRONG
 merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
 ab_reg_logs <- pgmm(
   monthly_avg_taps ~ plm::lag(monthly_avg_taps, 1) + plm::lag(sum_TE_logs, 1:3) |
@@ -2138,7 +2192,8 @@ summary(ab_reg_imputed, robust = TRUE)
 
 # should maybe use fewer lags, given short time series?
 
-# generate a regression table
+
+# now generate a regression table
 library(texreg)
 
 # ── Custom extractor for pgmm models ─────────────────────────────────────────
