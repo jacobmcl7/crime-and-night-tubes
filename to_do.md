@@ -1,43 +1,42 @@
 to do list:
 
 next things to do:
- - cluster BJS SEs, do Conley SEs
-   - should really do Conley SEs in BJS, but hard
-   - instead, just cluster by broad geographical area (e.g. MSOA), and report results for different cluster levels
-   - then report in appendix the TWFE results with Conley SEs for various kernels
+ - finish off all analysis
+    - do T+R result with different groups of controls for robustness
+    - do the crime grid with different groups of controls for robustness
+    - run BJS with clustered SEs at the location level
+    - do Conley TWFE/A+S for extra robustness (with various kernels)
+    - do robustness of main result via BJS with other clustering levels
+    - make a heatmap for visualisation
 
- - sort out the issues with Arellano-Bond estimation of the behaviour effect
+ - determine the paper's contribution targets
 
- - work out what to do with controls
+ - rewrite lit review to match the paper's contribution targets
 
- - Poisson graphing wrong? check intercept at et = -1
+ - write all the extra bits required in the draft
 
- - get in the appropriate covariates - e.g. region and station properties
-    - population density, local employment rates, land use mix, property values, nearby income/IMD, distance to central London (?) all interacted with time
-    - while doing this, maybe undo the splitting of files for the geocoding - we don't need to do this
-    - SORT OUT ISSUES WITH COVARIANCES MATRIX NOT BEING POSITIVE DEF - NEEDS FIXING
+ - organise analysis and visualisation code better - make it clear what results go where
 
- - get all notes into one place - move from overleaf
+ - organise cleaning better
 
- - get the proof correct for consistency
+ - cut words (last, after making a new draft)
 
- - determine whether/how to examine police outcomes - maybe get in updated new data?
-   - but who outside London cares?
+ - make graphs and tables nicer
 
- - think about how to demonstrate no substitution - use different control groups, and plot means? 
-   - use regions within 1km of other stations, and separately use regions just between 1 and 2km of treated stations, then just look at whether the control regions go down or not
-   - do placebo regressions - between 1-2km from night tube station on within 1km of non-nt stations, etc
-    - but this isn't conclusive. Seems like plotting means is the best option, then a heatmap for overall/argue it is harder to determine due to very different characteristics
+-------- NON-URGENT EXTRAS
 
- - check the new data construction is done properly
+ - see if Arellano-Bond works
 
- - get the night tube usage - entry/exit data! show the effect is proportional to this?
-    - what can we actually get with this though
+ - sort out issues with the covariance matrix not being positive def in the estimation with controls
+
+ - determine asymptotic normality of density estimator
+
+ - check all data construction
+
+ - get all notes into one place (merge Overleaf to Notion)
 
  - organise the data cleaning much better! merge the parallel cleaning processes together, for example
 
  - organise the data analysis much better! maybe define treatment in the cleaning, for example, and make the functions nicer
 
  - think about applying for more granular crime data from uk police
-
- - make all graphs nicer
