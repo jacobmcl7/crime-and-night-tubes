@@ -10,6 +10,7 @@ next things to do:
     - make a heatmap for visualisation
     - do the last parts for different distance thresholds, for robustness
     - combine IV and levels estimation into one table
+    - needs more informative tables/figures for the Data section
 
  - determine the paper's contribution targets
 

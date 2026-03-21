@@ -2104,29 +2104,19 @@ my_dict <- c(
 
 setFixest_dict(my_dict)
 
-# OLS table
+# make the table
 etable(
-  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag,
-  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag,
-  headers = c("Log", "Log", "Log",
-              "Imputed", "Imputed", "Imputed"),
+  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag, as_reg_logs,
+  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag, as_reg_imputed,
+  headers = c("Log", "Log", "Log", "AH: Log", "Imputed", "Imputed", "Imputed", "AH: Imputed"),
+  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
+          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
+          "fit_l\\(change_avg_taps", "^change_avg_taps"),
   tex = TRUE,
-  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_ols.tex",
-  fitstat = ~ r2 + n,
-  title = "OLS: Effect of lagged treatment intensity on ridership changes",
-  label = "tab:ols_results",
-  fontsize = "footnotesize"
-)
-
-# IV table
-etable(
-  as_reg_logs, as_reg_imputed,
-  headers = c("AH: Log", "AH: Imputed"),
-  tex = TRUE,
-  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_ah.tex",
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions.tex",
   fitstat = ~ r2 + n + ivwald,
-  title = "Anderson-Hsiao IV estimates",
-  label = "tab:ah_results",
+  title = "Effect of lagged treatment intensity on ridership changes",
+  label = "tab:behaviour_results",
   fontsize = "footnotesize"
 )
 
