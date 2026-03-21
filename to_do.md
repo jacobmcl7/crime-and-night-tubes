@@ -8,6 +8,8 @@ next things to do:
     - do Conley TWFE/A+S for extra robustness (with various kernels)
     - do robustness of main result via BJS with other clustering levels
     - make a heatmap for visualisation
+    - do the last parts for different distance thresholds, for robustness
+    - combine IV and levels estimation into one table
 
  - determine the paper's contribution targets
 
