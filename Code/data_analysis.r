@@ -1095,6 +1095,90 @@ ggplot(coefs_all, aes(x = event_time)) +
 ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_combined.png", width = 8, height = 6)
 
 
+###################################################################
+
+# 9g) now do it for thefts and robberies with controls
+
+# first with BJS
+
+# load in the results from csv
+coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_theft_and_robbery_controls.csv", "tau")
+
+# plot the results
+plot(coefs = coefs, 
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.05,
+    ymax = 0.05,
+    title = "BJS (2024) - Theft and Robbery with Controls", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save the graph
+ggsave("Crime and night tubes/Output/Results/BJS_1km_theft_and_robbery_controls.png", width = 8, height = 6)
+
+
+# now with TWFE
+
+# create the variable
+final_data <- final_data %>%
+  mutate(log_theft_and_robbery = log(theft_from_the_person + robbery + 1)) # add 1 to avoid log(0)
+
+# run the regression with all controls
+TWFE_1km_theft_and_robbery_all_controls <- feols(log_theft_and_robbery ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs_all <- plot_prepare(TWFE_1km_theft_and_robbery_all_controls, substring = "event_time_1")
+
+# run it with IMD controls
+TWFE_1km_theft_and_robbery_IMD_controls <- feols(log_theft_and_robbery ~ i(event_time_1, ref = -1) + i(Month, IMD) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs_IMD <- plot_prepare(TWFE_1km_theft_and_robbery_IMD_controls, substring = "event_time_1")
+
+# run it with constructed controls
+TWFE_1km_theft_and_robbery_constructed_controls <- feols(log_theft_and_robbery ~ i(event_time_1, ref = -1) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = final_data, cluster = "location")
+
+# prepare the coefficients for plotting
+coefs_constructed <- plot_prepare(TWFE_1km_theft_and_robbery_constructed_controls, substring = "event_time_1")
+
+# plot the graphs
+plot(coefs = coefs_all, 
+     xsequence = seq(-20, 15, 5), 
+     ymin = -0.1,
+     ymax = 0.1,
+     title = "TWFE - Theft and Robbery with All Controls", 
+     note = "Simple treatment definition, theshold = 1km")
+plot(coefs = coefs_IMD,
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "TWFE - Theft and Robbery with IMD Controls", 
+    note = "Simple treatment definition, theshold = 1km")
+plot(coefs = coefs_constructed,
+    xsequence = seq(-20, 15, 5), 
+    ymin = -0.1,
+    ymax = 0.1,
+    title = "TWFE - Theft and Robbery with Constructed Controls", 
+    note = "Simple treatment definition, theshold = 1km")
+
+# save it
+# DO THIS ONCE DONE PROPERLY
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ####################################################################
@@ -1222,6 +1306,93 @@ for (crime in crime_types_bjs) {
 
 # save this too
 ggsave("Crime and night tubes/Output/Results/BJS_1km_crimes_grid.png", width = 22, height = 12)
+
+
+####################################################################
+
+# 10d) now do it with controls for all crimes with TWFE
+
+crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
+ "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
+ "possession_of_weapons", "bicycle_theft", "drugs", "public_order",                
+"theft_from_the_person", "robbery")
+
+for (crime in crime_types) {
+  
+  # create the formula
+  formula_imd_constructed <- as.formula(paste0("`log_", crime, "` ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month"))
+  
+  # run the regression
+  model <- feols(formula_imd_constructed, data = final_data, cluster = "location")
+  
+  # prepare the coefficients for plotting
+  coefs <- plot_prepare(model, substring = "event_time_1")
+  
+  # save and plot the graph
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
+      xsequence = seq(-20, 15, 5), 
+      ymin = -0.05,
+      ymax = 0.05,
+      title = gsub("_", " ", crime),
+      note = "Simple treatment definition, theshold = 1km"))
+  # now print the plot in the loop
+  print(get(paste0("plot_", crime)))
+  
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+  
+}
+
+# now plot them all in one big grid
+(plot_violence_and_sexual_offences + plot_vehicle_crime + plot_other_theft + plot_burglary +
+ `plot_anti-social_behaviour` + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
+ plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
+ plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 5)
+
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid_controls_constructed_imd.png", width = 22, height = 12)
+
+
+# now do it with all possible crimes
+
+for (crime in crime_types) {
+  
+  # create the formula
+  formula_imd_constructed <- as.formula(paste0("`log_", crime, "` ~ i(event_time_1, ref = -1) + i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month"))
+  
+  # run the regression
+  model <- feols(formula_imd_constructed, data = final_data, cluster = "location")
+  
+  # prepare the coefficients for plotting
+  coefs <- plot_prepare(model, substring = "event_time_1")
+  
+  # save and plot the graph
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
+      xsequence = seq(-20, 15, 5), 
+      ymin = -0.05,
+      ymax = 0.05,
+      title = gsub("_", " ", crime),
+      note = "Simple treatment definition, theshold = 1km"))
+  # now print the plot in the loop
+  print(get(paste0("plot_", crime)))
+  
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+  
+}
+
+# now plot them all in one big grid
+(plot_violence_and_sexual_offences + plot_vehicle_crime + plot_other_theft + plot_burglary +
+ `plot_anti-social_behaviour` + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
+ plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
+ plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 5)
+
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid_controls_all.png", width = 22, height = 12)
+
+
 
 
 
@@ -1811,10 +1982,10 @@ final_data <- final_data %>%
 # collect not (yet) treated units
 first_stage_data <- final_data %>%
   filter(event_time_1 < 0) %>%
-  select(location, Month, log_theft_robbery, IMD, income_rank, education_rank, health_rank, barriers_rank, living_env_rank)
+  select(location, Month, log_theft_robbery, IMD, pop_density, single_adult_hh_prop, avg_age, prop_same_eth_group, avg_health_score)
 
 # do the regression
-TWFE_1km_theft_robbery_controls <- feols(log_theft_robbery ~ i(Month, IMD) + i(Month, income_rank) + i(Month, education_rank) + i(Month, health_rank) + i(Month, barriers_rank) + i(Month, living_env_rank) | location + Month, data = first_stage_data)
+TWFE_1km_theft_robbery_controls <- feols(log_theft_robbery ~ i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = first_stage_data)
 
 # get fitted values and residuals for the whole data
 final_data$fitted_vals <- predict(TWFE_1km_theft_robbery_controls, newdata = final_data)
@@ -2159,6 +2330,182 @@ etable(
 
 
 #########################################################################
+
+
+# 14a) now do the same, but with residuals from a regression with controls
+
+# load in the ridership data
+ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
+
+# now get the imputed treatment effect for each location-month
+
+# get the outcome variable ready
+final_data <- final_data %>%
+  mutate(theft_robbery = theft_from_the_person + robbery) %>%
+  mutate(log_theft_robbery = log(theft_robbery + 1))
+
+# subset the data to pre-treatment observations, as before
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, theft_robbery, log_theft_robbery, IMD, income_rank, education_rank, health_rank, barriers_rank, living_env_rank, pop_density, prop_same_eth_group, single_adult_hh_prop, avg_health_score, avg_age)
+
+# do the regressions
+first_stage_logs <- feols(log_theft_robbery ~ i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = first_stage_data)
+first_stage_Poisson <- feglm(theft_robbery ~ i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = first_stage_data, family = poisson)
+# 17,154 locations (c. 500,000 observations) removed because of only 0 outcomes (no thefts or robberies ever)
+# 587,489 observations left
+
+# get the fitted values and residuals for the whole data
+final_data <- final_data %>%
+  mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
+  mutate(residuals = log_theft_robbery - fitted_vals) %>%
+  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = final_data)) %>%
+  mutate(residuals_poisson = theft_robbery - fitted_poisson) %>%
+  mutate(residuals_imputed = theft_robbery - exp(fitted_vals) + 1)
+
+# we do the following analysis on 2017 data, so first drop all earlier years and untreated observations
+behaviour_data <- final_data %>%
+  filter(period >= 25) %>%  # i.e. from 2017 onwards
+  filter(event_time_1 >= 0)  # i.e. only treated observations
+
+# now do the station-level aggregation
+station_ATT_data <- behaviour_data %>%
+  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
+  group_by(stations_within_0.5km, period) %>%
+  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
+  ungroup() %>%
+  rename(station = stations_within_0.5km)
+
+# now merge with the station data from above
+merged_data <- ridership_data %>%
+  inner_join(
+    station_ATT_data,
+    by = c("station", "period")
+  )
+
+
+detach("package:plm", unload = TRUE)
+
+# now create a variable giving the proportional and the level change in ridership compared to the previous period, for each station
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(station, period) %>%
+  mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
+  ungroup()
+
+# now do the same for proportional change in the imputed treatment effect (generating separate ones for each type of TE)
+merged_data <- merged_data %>%
+  group_by(station) %>%
+  arrange(period) %>%
+  mutate(change_sum_TE_logs = sum_TE_logs - lag(sum_TE_logs)) %>%
+  mutate(change_sum_TE_poisson = sum_TE_poisson - lag(sum_TE_poisson)) %>%
+  mutate(change_sum_TE_imputed = sum_TE_imputed - lag(sum_TE_imputed)) %>%
+  ungroup()
+
+# reattach plm
+library(plm)
+
+# finally, declare the merged data as a panel
+merged_data <- panel(merged_data, ~ station + period)
+
+# now ready for regressions
+
+# Q: WHAT SEs TO USE?
+  # without lagged dep.vars, just cluster by station
+# also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
+  # Arellano-Bond for this
+  # presume we need to get some controls in too
+
+# first analyse the sum of log TEs (without lagged dep vars)
+behaviour_logs_1lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_logs_1lag)
+
+behaviour_logs_2lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_logs_2lag)
+
+behaviour_logs_3lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) + l(change_sum_TE_logs, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_logs_3lag)
+
+# now do it for the sum of imputed TEs from the log regression
+behaviour_imputed_1lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_1lag)
+
+behaviour_imputed_2lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_2lag)
+
+behaviour_imputed_3lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) + l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_imputed_3lag)
+
+# now do it for the sum of Poisson TEs (again without LDVs)
+behaviour_poisson_1lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_poisson_1lag)
+
+behaviour_poisson_2lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_poisson_2lag)
+
+behaviour_poisson_3lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) + l(change_sum_TE_poisson, 3) | station + period, data = merged_data, cluster = ~ station)
+summary(behaviour_poisson_3lag)
+
+# I think this should be proportional change maybe? Or find controls? What is the issue here?
+
+# do Anderson-Hsiao for log TEs
+as_reg_logs <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(as_reg_logs, stage = 1:2)
+
+# do Anderson-Hsiao for imputed TEs
+as_reg_imputed <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(as_reg_imputed, stage = 1:2)
+
+# do Anderson-Hsiao for Poisson TEs
+as_reg_poisson <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period | 
+                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+
+summary(as_reg_poisson, stage = 1:2)
+
+
+# make a regression table for these
+
+# first make a dictionary for table labels
+my_dict <- c(
+  "l(change_sum_TE_logs, 1)"    = "$\\Delta$ Log TE$_{t-1}$",
+  "l(change_sum_TE_logs, 2)"    = "$\\Delta$ Log TE$_{t-2}$",
+  "l(change_sum_TE_logs, 3)"    = "$\\Delta$ Log TE$_{t-3}$",
+  "l(change_sum_TE_imputed, 1)" = "$\\Delta$ Imputed TE$_{t-1}$",
+  "l(change_sum_TE_imputed, 2)" = "$\\Delta$ Imputed TE$_{t-2}$",
+  "l(change_sum_TE_imputed, 3)" = "$\\Delta$ Imputed TE$_{t-3}$",
+  "fit_l(change_avg_taps, 1)"   = "$\\Delta$ Avg Taps$_{t-1}$ (fitted)",
+  "change_avg_taps"             = "$\\Delta$ Avg Taps",
+  "station"                     = "Station",
+  "period"                      = "Period"
+)
+
+setFixest_dict(my_dict)
+
+# make the table
+etable(
+  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag, as_reg_logs,
+  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag, as_reg_imputed,
+  headers = c("Log", "Log", "Log", "AH: Log", "Imputed", "Imputed", "Imputed", "AH: Imputed"),
+  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
+          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
+          "fit_l\\(change_avg_taps", "^change_avg_taps"),
+  tex = TRUE,
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions.tex",
+  fitstat = ~ r2 + n + ivwald,
+  title = "Effect of lagged treatment intensity on ridership changes",
+  label = "tab:behaviour_results",
+  fontsize = "footnotesize"
+)
+
+
+
 
 
 

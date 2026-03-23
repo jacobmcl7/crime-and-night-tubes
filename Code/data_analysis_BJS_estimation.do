@@ -7,7 +7,12 @@ import delimited "Crime and night tubes EXTRA DATA\final_data_for_stata.csv"
 *prepare the data for the estimator 
 replace first_treatment_1 = "" if first_treatment_1 == "Inf"
 destring first_treatment_1, replace
-
+destring imd, replace force
+destring pop_density, replace force
+destring avg_age, replace force
+destring prop_same_eth_group, replace force
+destring single_adult_hh_prop, replace force
+destring avg_health_score, replace force
 
 
 
@@ -19,31 +24,16 @@ did_imputation log_num_crimes location period first_treatment_1, allhorizons pre
 *save the coefficient vector and the SEs as a csv
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all.csv", cells("b se") plain replace noobs
 
-
-
-
-*2) do a BJS estimation for thefts only
+*1a) do it with controls
 
 *do the regression
-/* did_imputation log_theft_from_the_person location period first_treatment_1, allhorizons pre(10) */
-
-*save the results
-/* esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft.csv", cells("b se") plain replace noobs */
+did_imputation log_num_crimes location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score) nose
 
 
 
 
-*3) do a BJS estimation for robberies only
 
-*do the regression
-did_imputation log_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm)
-
-*save the results
-esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_robbery.csv", cells("b se") plain replace noobs
-
-
-
-*4) do it for their sum
+*4) do it for the sum of thefts and robberies
 
 *create the variable for the sum of thefts and robberies
 gen log_theft_and_robbery = log(theft_from_the_person + robbery + 1)
@@ -53,6 +43,16 @@ did_imputation log_theft_and_robbery location period first_treatment_1, allhoriz
 
 *save the results
 esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery.csv", cells("b se") plain replace noobs
+
+
+*4a) do it with controls
+
+*do the regression
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score) nose
+
+*save the results
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery_controls.csv", cells("b se") plain replace noobs
+
 
 
 
