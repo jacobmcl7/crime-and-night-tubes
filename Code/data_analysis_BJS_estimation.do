@@ -189,6 +189,49 @@ forvalues i = 1/4 {
 }
 
 
+*7a) now the same but with controls
+*now loop through each of these bins, create weights for each post-period, and do the BJS estimation
+forvalues i = 1/4 {
+    local bin_var = ""
+    if `i' == 1 {
+        local bin_var = "band_0_250m"
+    }
+    else if `i' == 2 {
+        local bin_var = "band_250_500m"
+    }
+    else if `i' == 3 {
+        local bin_var = "band_500_750m"
+    }
+    else if `i' == 4 {
+        local bin_var = "band_750_1000m"
+    }
+    
+    *create weight vectors for this distance band
+    forvalues t = 0/16 {
+        qui gen W`t' = 0
+        qui replace W`t' = `bin_var' if event_time_1 == `t' & first_treatment_1 < .
+        
+        * Count observations where W equals 1
+        qui count if W`t' == 1
+        local sum_bin = r(N)
+        
+        * Normalize
+        qui replace W`t' = W`t' / `sum_bin' if first_treatment_1 < . & W`t' == 1
+    }
+    
+    *now do the BJS estimation for this distance band, for the thefts + robberies outcome
+    did_imputation log_theft_and_robbery location period first_treatment_1, pre(20) wtr(W0 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 W11 W12 W13 W14 W15 W16) sum cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score) nose
+    
+    *save the coefficient vector and the SEs as a csv
+    esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_distance_band_`i'_controls.csv", cells("b se") plain replace noobs
+
+    *report when done
+    di "Done with distance band `i'"
+
+    *drop the weight variables before the next iteration
+    drop W0-W16
+}
+
 
 
 

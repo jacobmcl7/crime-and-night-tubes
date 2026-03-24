@@ -1164,6 +1164,79 @@ plot(coefs = coefs_constructed,
 # DO THIS ONCE DONE PROPERLY
 
 
+########################################################################
+
+# 9h) now do it with BJS by distance with controls
+
+# load in the results from csv
+coefs_0_025 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_1_controls.csv", "tau_W")
+coefs_025_05 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_2_controls.csv", "tau_W")
+coefs_05_075 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_3_controls.csv", "tau_W")
+coefs_075_1 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_4_controls.csv", "tau_W")
+
+# keep all observations in coefs such that event_time >= 0
+coefs_0_025 <- coefs_0_025 %>% filter(event_time >= 0)
+coefs_025_05 <- coefs_025_05 %>% filter(event_time >= 0)
+coefs_05_075 <- coefs_05_075 %>% filter(event_time >= 0)
+coefs_075_1 <- coefs_075_1 %>% filter(event_time >= 0)
+
+# stack them together into the same dataframe, merged by event_time
+coefs_all <- coefs_0_025 %>%
+  select(event_time, coef, se) %>%
+  rename(coef_0_025 = coef, se_0_025 = se) %>%
+  left_join(coefs_025_05 %>% select(event_time, coef, se) %>% rename(coef_025_05 = coef, se_025_05 = se), by = "event_time") %>%
+  left_join(coefs_05_075 %>% select(event_time, coef, se) %>% rename(coef_05_075 = coef, se_05_075 = se), by = "event_time") %>%
+  left_join(coefs_075_1 %>% select(event_time, coef, se) %>% rename(coef_075_1 = coef, se_075_1 = se), by = "event_time")
+
+# now plot them all together, with different colours for each distance band, and error bars for the confidence intervals
+band_colours <- c(
+  "0 to 0.25km"    = "#1B3A6B",  # navy blue
+  "0.25 to 0.5km"  = "#2E86AB",  # steel blue
+  "0.5 to 0.75km"  = "#7DC88A",  # sage green
+  "0.75 to 1km"    = "#A8C45A"   # medium yellow-green
+)
+
+ggplot(coefs_all, aes(x = event_time)) +
+  # Reference line at 0
+  geom_hline(yintercept = 0,, colour = "black", linewidth = 0.75) +
+  # Ribbons (fill mapped to same labels as colour)
+  geom_ribbon(aes(ymin = coef_0_025 - 1.96 * se_0_025,
+                  ymax = coef_0_025 + 1.96 * se_0_025,
+                  fill = "0 to 0.25km"), alpha = 0.15) +
+  geom_ribbon(aes(ymin = coef_025_05 - 1.96 * se_025_05,
+                  ymax = coef_025_05 + 1.96 * se_025_05,
+                  fill = "0.25 to 0.5km"), alpha = 0.15) +
+  geom_ribbon(aes(ymin = coef_05_075 - 1.96 * se_05_075,
+                  ymax = coef_05_075 + 1.96 * se_05_075,
+                  fill = "0.5 to 0.75km"), alpha = 0.15) +
+  geom_ribbon(aes(ymin = coef_075_1 - 1.96 * se_075_1,
+                  ymax = coef_075_1 + 1.96 * se_075_1,
+                  fill = "0.75 to 1km"), alpha = 0.15) +
+  # Lines
+  geom_line(aes(y = coef_0_025,  colour = "0 to 0.25km"),   linewidth = 0.8) +
+  geom_line(aes(y = coef_025_05, colour = "0.25 to 0.5km"), linewidth = 0.8) +
+  geom_line(aes(y = coef_05_075, colour = "0.5 to 0.75km"), linewidth = 0.8) +
+  geom_line(aes(y = coef_075_1,  colour = "0.75 to 1km"),   linewidth = 0.8) +
+  # Points
+  geom_point(aes(y = coef_0_025,  colour = "0 to 0.25km"),   size = 1.8) +
+  geom_point(aes(y = coef_025_05, colour = "0.25 to 0.5km"), size = 1.8) +
+  geom_point(aes(y = coef_05_075, colour = "0.5 to 0.75km"), size = 1.8) +
+  geom_point(aes(y = coef_075_1,  colour = "0.75 to 1km"),   size = 1.8) +
+  # Scales
+  scale_colour_manual(name = "Distance Band", values = band_colours) +
+  scale_fill_manual(name = "Distance Band", values = band_colours) +
+  labs(
+    title   = "BJS (2024) results for theft and robbery, disaggregated by distance",
+    caption = "Basic treatment definition, threshold = 1km",
+    x = "Event Time",
+    y = "Coefficient"
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_controls_combined.png", width = 8, height = 6)
+
+
 
 
 
