@@ -763,6 +763,76 @@ ggplot(mean_data_theft_robbery,
 # save it
 ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg.png", width = 8, height = 6)
 
+
+################################################################
+
+# now just do them for two groups - those within 1km from any Night Tube station, and those outside
+
+# first generate the thefts + robberies variable, and an ever-treated variable
+final_data <- final_data %>%
+  mutate(theft_robbery = robbery + theft_from_the_person) %>%
+  mutate(within_1km = ifelse(first_treatment_1 %in% c("20", "22", "23", "24"), "Within 1km of NT", "Outside 1km from NT"))
+
+# calculate monthly means of theft_robbery and of the total crime count, by first treatment period
+mean_data <- final_data %>%
+  group_by(period, within_1km) %>%
+  summarise(mean_theft_robbery = mean(theft_robbery, na.rm = TRUE), mean_total_crime = mean(num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# plot it as a line graph, by first treatment period
+treatment_colors <- c(
+  "Within 1km of NT"  = "#ae00ff", 
+  "Outside 1km from NT"  = "#000000"
+)
+
+# first plot theft_robbery means
+ggplot(mean_data,
+       aes(x = period,
+           y = mean_theft_robbery,
+           color = as.factor(within_1km),
+           group = as.factor(within_1km))) +
+  geom_line(linewidth = 0.75, alpha = 0.9) +
+  geom_point(size = 1.5) +
+  scale_color_manual(
+    values = treatment_colors,
+    labels = c("Within 1km of NT" = "Within 1km of NT", "Outside 1km from NT" = "Outside 1km from NT"),
+    breaks = c("Within 1km of NT", "Outside 1km from NT")
+  ) +
+  labs(
+    title    = "Mean Thefts & Robberies Over Time",
+    x        = "Month",
+    y        = "Mean thefts & robberies",
+    color    = "First treatment period"
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_unadjusted_2groups.png", width = 8, height = 6)
+
+# now plot total crime count means
+ggplot(mean_data,
+       aes(x = period,
+           y = mean_total_crime,
+           color = as.factor(within_1km),
+           group = as.factor(within_1km))) +
+  geom_line(linewidth = 0.75, alpha = 0.9) +
+  geom_point(size = 1.5) +
+  scale_color_manual(
+    values = treatment_colors,
+    labels = c("Within 1km of NT" = "Within 1km of NT", "Outside 1km from NT" = "Outside 1km from NT"),
+    breaks = c("Within 1km of NT", "Outside 1km from NT")
+  ) +
+  labs(
+    title    = "Mean Number of Crimes Over Time",
+    x        = "Month",
+    y        = "Mean number of crimes",
+    color    = "First treatment period"
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time_unadjusted_2groups.png", width = 8, height = 6)
+
 ############################################################
 
 
