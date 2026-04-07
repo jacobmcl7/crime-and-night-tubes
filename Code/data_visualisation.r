@@ -467,6 +467,10 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 ############################################################
 
+
+
+
+
 # now plot the evolution of the mean of the count of thefts and robberies
 
 # NOTE: NEED TO REMOVE 'TREATMENT WINDOW' AND CONVERT PERIOD TO MONTHS
@@ -507,11 +511,6 @@ ggplot(mean_data_theft_robbery,
            y = adjusted_mean_theft_robbery,
            color = as.factor(first_treatment_1),
            group = as.factor(first_treatment_1))) +
-  annotate("rect", xmin = 19.5, xmax = 24.5,
-           ymin = -Inf, ymax = Inf,
-           fill = "grey90", alpha = 0.5) +
-  annotate("text", x = 22, y = Inf, label = "Treatment\nwindow",
-           vjust = 1.4, size = 3, color = "grey50", fontface = "italic") +
   geom_line(linewidth = 0.75, alpha = 0.9) +
   geom_point(size = 1.5) +
   scale_color_manual(
@@ -533,8 +532,153 @@ ggplot(mean_data_theft_robbery,
 ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time.png", width = 8, height = 6)
 
 
+# now do the same as before, but don't rescale to have the same mean
 
-# now do the same as above, but split up the control groups
+# first generate the thefts + robberies variable
+final_data <- final_data %>%
+  mutate(theft_robbery = robbery + theft_from_the_person)
+
+# calculate monthly means of theft_robbery, by first treatment period
+mean_data_theft_robbery <- final_data %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_theft_robbery = mean(theft_robbery, na.rm = TRUE)) %>%
+  ungroup()
+
+# plot it as a line graph, by first treatment period
+treatment_colors <- c(
+  "20"  = "#A8C8E8",  # pastel blue
+  "22"  = "#F4B8C1",  # pastel pink
+  "23"  = "#A8DDB5",  # pastel green
+  "24"  = "#F9D8A0",  # pastel yellow
+  "Inf" = "#000000"   # black
+)
+
+ggplot(mean_data_theft_robbery,
+       aes(x = period,
+           y = mean_theft_robbery,
+           color = as.factor(first_treatment_1),
+           group = as.factor(first_treatment_1))) +
+  geom_line(linewidth = 0.75, alpha = 0.9) +
+  geom_point(size = 1.5) +
+  scale_color_manual(
+    values = treatment_colors,
+    labels = c("Inf" = "Control", "20" = "Aug-2016", "22" = "Oct-2016", "23" = "Nov-2016",
+              "24" = "Dec-2016"),
+    breaks = c("Inf", "20", "22", "23", "24")
+  ) +
+  labs(
+    title    = "Mean Thefts & Robberies Over Time",
+    x        = "Month",
+    y        = "Mean thefts & robberies",
+    color    = "First treatment period",
+    caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_unadjusted.png", width = 8, height = 6)
+
+
+
+# now do it on the total crime count, as above
+mean_data <- final_data %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_count = mean(num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# adjust the means so all have the same average mean between period 1 and 19, by subtracting the difference
+baseline_means <- mean_data %>%
+  filter(period >= 1 & period <= 19) %>%
+  group_by(first_treatment_1) %>%
+  summarise(baseline_mean = mean(mean_count, na.rm = TRUE)) %>%
+  ungroup()
+
+# join the baseline means back to the mean data
+mean_data <- mean_data %>%
+  left_join(baseline_means, by = "first_treatment_1") %>%
+  mutate(adjusted_mean_count = mean_count - baseline_mean + mean(baseline_mean, na.rm = TRUE))
+
+# plot it as a line graph, by first treatment period
+treatment_colors <- c(
+  "20"  = "#A8C8E8",  # pastel blue
+  "22"  = "#F4B8C1",  # pastel pink
+  "23"  = "#A8DDB5",  # pastel green
+  "24"  = "#F9D8A0",  # pastel yellow
+  "Inf" = "#000000"   # black
+)
+
+ggplot(mean_data,
+       aes(x = period,
+           y = adjusted_mean_count,
+           color = as.factor(first_treatment_1),
+           group = as.factor(first_treatment_1))) +
+  geom_line(linewidth = 0.75, alpha = 0.9) +
+  geom_point(size = 1.5) +
+  scale_color_manual(
+    values = treatment_colors,
+    labels = c("Inf" = "Control", "20" = "Aug-2016", "22" = "Oct-2016", "23" = "Nov-2016",
+              "24" = "Dec-2016"),
+    breaks = c("Inf", "20", "22", "23", "24")
+  ) +
+  labs(
+    title    = "Mean Number of Crimes Over Time",
+    x        = "Month",
+    y        = "Mean number of crimes",
+    color    = "First treatment period",
+    caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time.png", width = 8, height = 6)
+
+
+
+
+# now do it without adjustment of means, again as above
+mean_data <- final_data %>%
+  group_by(period, first_treatment_1) %>%
+  summarise(mean_count = mean(num_crimes, na.rm = TRUE)) %>%
+  ungroup()
+
+# plot it as a line graph, by first treatment period
+treatment_colors <- c(
+  "20"  = "#A8C8E8",  # pastel blue
+  "22"  = "#F4B8C1",  # pastel pink
+  "23"  = "#A8DDB5",  # pastel green
+  "24"  = "#F9D8A0",  # pastel yellow
+  "Inf" = "#000000"   # black
+)
+
+ggplot(mean_data,
+       aes(x = period,
+           y = mean_count,
+           color = as.factor(first_treatment_1),
+           group = as.factor(first_treatment_1))) +
+  geom_line(linewidth = 0.75, alpha = 0.9) +
+  geom_point(size = 1.5) +
+  scale_color_manual(
+    values = treatment_colors,
+    labels = c("Inf" = "Control", "20" = "Aug-2016", "22" = "Oct-2016", "23" = "Nov-2016",
+              "24" = "Dec-2016"),
+    breaks = c("Inf", "20", "22", "23", "24")
+  ) +
+  labs(
+    title = "Mean Number of Crimes Over Time",
+    x        = "Month",
+    y        = "Mean number of crimes",
+    color    = "First treatment period",
+  ) +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time_unadjusted.png", width = 8, height = 6)
+
+
+
+
+
+# now do the same as the first of these plots (mean-adjusted theft and robbery), but split up the control groups
 
 # temporary - create a minimum distance to night tube variable that goes as far as 2km
 # do this via taking the min of min_nt_*_dist, for all such variables in the data
@@ -585,8 +729,6 @@ ggplot(mean_data_theft_robbery,
   annotate("rect", xmin = 19.5, xmax = 24.5,
            ymin = -Inf, ymax = Inf,
            fill = "grey90", alpha = 0.5) +
-  annotate("text", x = 22, y = Inf, label = "Treatment\nwindow",
-           vjust = 1.4, size = 3, color = "grey50", fontface = "italic") +
   geom_line(linewidth = 0.75, alpha = 0.9) +
   geom_point(size = 1.5) +
   scale_color_manual(
