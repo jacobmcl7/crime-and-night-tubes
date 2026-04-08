@@ -153,3 +153,23 @@ station_monthly <- station_monthly %>%
 
 # save this as a csv file
 write.csv(station_monthly, "TfL_station_monthly_ridership.csv", row.names = FALSE)
+
+
+# also collect up the weekly counts
+
+station_weekly <- data %>%
+    group_by(`Travel Location`, Week) %>%
+    summarise(Total_Taps = sum(`Count of Taps`)) %>%
+    mutate(`Travel Location` = dplyr::recode(`Travel Location`, !!!station_name_mapping)) %>%
+
+    # now remove all observations in 2016, where the first two characters of week are 16
+    filter(substr(Week, 1, 2) == "17") %>%
+
+    # now collect the month and the date variable
+    mutate(month = as.numeric(substr(Week, 3, 4))) %>%
+    mutate(date = as.numeric(substr(Week, 5, 6))) %>%
+
+    # finally remove, rename variables and export the data
+    select(-Week) %>%
+    rename(station = `Travel Location`) %>%
+    write.csv("TfL_station_weekly_ridership.csv", row.names = FALSE)
