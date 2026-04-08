@@ -2623,7 +2623,7 @@ station_ATT_data <- behaviour_data %>%
   # Group by station and time period
   group_by(stations_within_0.5km, period) %>%
   # Calculate sums of the imputed treatment effects (i.e. the residuals) for each station-month combo
-  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
+  summarise(sum_TE_logs = sum(residuals), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
   ungroup() %>%
   rename(station = stations_within_0.5km)
 
@@ -2654,6 +2654,13 @@ as_reg_logs_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
                  l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 3),
                data = merged_data, cluster = ~ station)
 summary(as_reg_logs_3, stage = 1:2)
+
+# try instrumenting with levels
+as_reg_logs_levels <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_logs_levels, stage = 1:2)
+
 
 # use Arellano-Bond
 p_data <- pdata.frame(merged_data, index = c("station", "period"))
@@ -2869,12 +2876,7 @@ sys_gmm_model_imputed_4_5 <- pgmm(
 )
 summary(sys_gmm_model_imputed_4_5, robust = TRUE)
 
-
 # do we need to instrument for crime count?
-# should we just use a more granular measure and therefore larger T, with some imputing?
-
-
-
 
 
 
