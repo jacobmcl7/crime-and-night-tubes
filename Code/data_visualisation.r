@@ -870,17 +870,13 @@ crime_types <- c(
 calc_summary <- function(x) {
   x <- x[!is.na(x)]
   tibble(
-    N = length(x),
     Mean = mean(x),
-    SD = sd(x),
     Median = median(x),
     P75 = quantile(x, 0.75),
     P90 = quantile(x, 0.90),
     P95 = quantile(x, 0.95),
     P99 = quantile(x, 0.99),
     Max = max(x),
-    Total_Count = sum(x),
-    Nonzero = sum(x > 0),
     PCT_Nonzero = mean(x > 0) * 100
   )
 }
@@ -907,22 +903,22 @@ full_table <- panel
 
 # round relevant columns
 full_table <- full_table %>%
-  mutate(across(c(Mean, SD), ~round(., 3)))
+  mutate(across(c(Mean), ~round(., 3)))
 
 # order the table by total number of crimes
 full_table <- full_table %>%
-  arrange(desc(Nonzero))
+  arrange(desc(Mean))
 
 # prepare table for LaTeX
 latex_table <- full_table %>%
-  select(Variable, N, Mean, SD, Median, P75, P90, P95, P99, Max, Total_Count, Nonzero, PCT_Nonzero) %>%
+  select(Variable, Mean, Median, P75, P90, P95, P99, Max, PCT_Nonzero) %>%
   kbl(
     format = "latex",
     booktabs = TRUE,
     caption = "Summary Statistics",
     label = "tab:summary_stats",
-    col.names = c("Variable", "N", "Mean", "SD", "Median", "P75", "P90", "P95", "P99", "Max", "Total Count", "Nonzero", "\\% Nonzero"),
-    align = c("l", rep("c", 12)),
+    col.names = c("Variable", "Mean", "Median", "P75", "P90", "P95", "P99", "Max", "\\% Nonzero"),
+    align = c("l", rep("c", 8)),
     digits = 3,
     escape = FALSE  # needed if using LaTeX symbols in column names
   ) %>%
