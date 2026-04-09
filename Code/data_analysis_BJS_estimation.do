@@ -27,9 +27,9 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all.csv",
 *1a) do it with controls
 
 *do the regression
-did_imputation log_num_crimes location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score) nose
+did_imputation log_num_crimes location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score)
 
-
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_all_controls.csv", cells("b se") plain replace noobs
 
 
 

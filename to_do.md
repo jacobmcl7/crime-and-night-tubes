@@ -14,23 +14,23 @@ next things to do:
 
  - write all the extra bits required in the draft
 
- - organise analysis and visualisation code better - make it clear what results go where
-
- - organise cleaning better
-
  - cut words
 
  - make graphs and tables nicer
 
- - clear up table 2
+ - make descriptive stats for TfL data (for appendix)
 
- - make descriptive stats for TfL data
-
- - rewrite data section to be more insightful and fit with marking criteria
-
- - sort out tau vs beta notation
+ - work out how to frame heuristic estimation of effects
 
  - mention magnitude of local effects?
+
+ - include limitations and paths for future research
+
+ - check we have fit with marking criteria
+
+ - organise analysis and visualisation code better - make it clear what results go where
+
+ - organise cleaning better
 
  - more...
 
