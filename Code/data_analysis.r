@@ -2672,86 +2672,6 @@ as_reg_logs_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:2) | pe
                data = merged_data, cluster = ~ station)
 summary(as_reg_logs_crime_1_2, stage = 1:2)
 
-# EXTRAS:
-
-# use Arellano-Bond
-p_data <- pdata.frame(merged_data, index = c("station", "period"))
-
-ab_model <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 2:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model, robust = TRUE)
-
-# vary the number of instruments
-ab_model_2_3 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 2:3),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_2_3, robust = TRUE)
-
-ab_model_2_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 2:5),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_2_5, robust = TRUE)
-
-# add in further lags
-ab_model_3_4 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 3:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_3_4, robust = TRUE)
-
-ab_model_3_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 3:5),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_3_5, robust = TRUE)
-
-ab_model_3_6 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 3:6),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_3_6, robust = TRUE)
-
-# add in instrumentation for the lagged crime count
-ab_model_crime <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 2:4) + lag(sum_TE_logs, 2:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_crime, robust = TRUE)
-
-ab_model_crime_3_4 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_logs, 3:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_crime_3_4, robust = TRUE)
-
 
 # now do it for imputed TEs
 as_reg_imputed <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
@@ -2776,133 +2696,8 @@ as_reg_imputed_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:2
                data = merged_data, cluster = ~ station)
 summary(as_reg_imputed_crime_1_2, stage = 1:2)
 
-# do Arellano-Bond for imputed TEs
-ab_model_imputed <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 2:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed, robust = TRUE)
 
-# vary the number of instruments
-ab_model_imputed_2_3 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 2:3),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_2_3, robust = TRUE)
-
-ab_model_imputed_2_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 2:5),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_2_5, robust = TRUE)
-
-# add in further lags
-ab_model_imputed_3_4 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 3:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_3_4, robust = TRUE)
-
-ab_model_imputed_3_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 3:5),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_3_5, robust = TRUE)
-
-ab_model_imputed_3_6 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 3:6),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_3_6, robust = TRUE)
-
-# add in instrumentation for the lagged crime count
-ab_model_imputed_crime <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 2:4) + lag(sum_TE_imputed, 2:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_crime, robust = TRUE)
-
-ab_model_imputed_crime_3_4 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_imputed, 3:4),
-  data = p_data,
-  effect = "twoways",        # Includes the 'period' fixed effects
-  model = "twosteps",     # Standard for optimal weighting matrix
-  transformation = "d"    # Automatically takes the first-difference of the entire equation
-)
-summary(ab_model_imputed_crime_3_4, robust = TRUE)
-
-############################
-
-# AH - why use lagged differences and not lagged levels??
-
-# AB - what about location clustering?
-
-# now try system GMM
-sys_gmm_model <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 3:4),
-  data = p_data,
-  effect = "twoways",      # Includes the time dummies
-  model = "twosteps",      # Standard for optimal weighting matrix
-  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
-  collapse = TRUE          # Prevents the computationally singular error
-)
-summary(sys_gmm_model, robust = TRUE)
-
-sys_gmm_model_4_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:3) + lag(sum_TE_logs, 1) | lag(monthly_avg_taps, 4:5),
-  data = p_data,
-  effect = "twoways",      # Includes the time dummies
-  model = "twosteps",      # Standard for optimal weighting matrix
-  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
-  collapse = TRUE          # Prevents the computationally singular error
-)
-summary(sys_gmm_model_4_5, robust = TRUE)
-
-sys_gmm_model_imputed <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 3:4),
-  data = p_data,
-  effect = "twoways",      # Includes the time dummies
-  model = "twosteps",      # Standard for optimal weighting matrix
-  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
-  collapse = TRUE          # Prevents the computationally singular error
-)
-summary(sys_gmm_model_imputed, robust = TRUE)
-
-sys_gmm_model_imputed_4_5 <- pgmm(
-  monthly_avg_taps ~ lag(monthly_avg_taps, 1:3) + lag(sum_TE_imputed, 1) | lag(monthly_avg_taps, 4:5),
-  data = p_data,
-  effect = "twoways",      # Includes the time dummies
-  model = "twosteps",      # Standard for optimal weighting matrix
-  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
-  collapse = TRUE          # Prevents the computationally singular error
-)
-summary(sys_gmm_model_imputed_4_5, robust = TRUE)
-
-# do we need to instrument for crime count?
-
-# make a summary table for AH estimation
-
+# now make a summary table for AH estimation
 # first make a dictionary for table labels
 my_dict <- c(
   "l(d(sum_TE_logs), 1)"    = "$\\Delta$ Log TE$_{t-1}$",
@@ -2936,6 +2731,251 @@ etable(
 )
 
 # add a line that gives which instruments are used for each regression
+
+####################################################################
+
+
+
+# EXTRAS:
+
+# use Arellano-Bond, with instrumentation for the lagged crime count too (as this is predetermined)
+p_data <- pdata.frame(merged_data, index = c("station", "period"))
+
+ab_model_crime_2_3 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1:2) | lag(monthly_avg_taps, 2:3) + lag(sum_TE_logs, 3:4),
+  data = p_data,
+  effect = "twoways",        # Includes the 'period' fixed effects
+  model = "twosteps",     # Standard for optimal weighting matrix
+  transformation = "d"    # Automatically takes the first-difference of the entire equation
+)
+summary(ab_model_crime_2_3, robust = TRUE)
+
+ab_model_crime_3_4 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1:2) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_logs, 3:4),
+  data = p_data,
+  effect = "twoways",        # Includes the 'period' fixed effects
+  model = "twosteps",     # Standard for optimal weighting matrix
+  transformation = "d"    # Automatically takes the first-difference of the entire equation
+)
+summary(ab_model_crime_3_4, robust = TRUE)
+
+# do Arellano-Bond for imputed TEs
+ab_model_imputed_crime_2_3 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1:2) | lag(monthly_avg_taps, 2:3) + lag(sum_TE_imputed, 3:4),
+  data = p_data,
+  effect = "twoways",        # Includes the 'period' fixed effects
+  model = "twosteps",     # Standard for optimal weighting matrix
+  transformation = "d"    # Automatically takes the first-difference of the entire equation
+)
+summary(ab_model_imputed_crime_2_3, robust = TRUE)
+
+ab_model_imputed_crime_3_4 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1:2) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_imputed, 3:4),
+  data = p_data,
+  effect = "twoways",        # Includes the 'period' fixed effects
+  model = "twosteps",     # Standard for optimal weighting matrix
+  transformation = "d"    # Automatically takes the first-difference of the entire equation
+)
+summary(ab_model_imputed_crime_3_4, robust = TRUE)
+
+
+
+# now try system GMM - first with log TEs
+sys_gmm_model_2_3 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1:2) | lag(monthly_avg_taps, 2:3) + lag(sum_TE_logs, 3:4),
+  data = p_data,
+  effect = "twoways",      # Includes the time dummies
+  model = "twosteps",      # Standard for optimal weighting matrix
+  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
+  collapse = TRUE          # Prevents the computationally singular error
+)
+summary(sys_gmm_model_2_3, robust = TRUE)
+
+sys_gmm_model_3_4 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_logs, 1:2) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_logs, 3:4),
+  data = p_data,
+  effect = "twoways",      # Includes the time dummies
+  model = "twosteps",      # Standard for optimal weighting matrix
+  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
+  collapse = TRUE          # Prevents the computationally singular error
+)
+summary(sys_gmm_model_3_4, robust = TRUE)
+
+# now with imputed TEs
+sys_gmm_model_imputed_2_3 <- pgmm(
+  monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_imputed, 1:2) | lag(monthly_avg_taps, 2:3) + lag(sum_TE_imputed, 3:4),
+  data = p_data,
+  effect = "twoways",      # Includes the time dummies
+  model = "twosteps",      # Standard for optimal weighting matrix
+  transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
+  collapse = TRUE          # Prevents the computationally singular error
+)
+summary(sys_gmm_model_imputed_2_3, robust = TRUE)
+
+sys_gmm_model_imputed_3_4 <- pgmm(
+    monthly_avg_taps ~ lag(monthly_avg_taps, 1:2) + lag(sum_TE_imputed, 1:2) | lag(monthly_avg_taps, 3:4) + lag(sum_TE_imputed, 3:4),
+    data = p_data,
+    effect = "twoways",      # Includes the time dummies
+    model = "twosteps",      # Standard for optimal weighting matrix
+    transformation = "ld",   # <-- THE CRITICAL CHANGE: "ld" stands for Level & Difference (System)
+    collapse = TRUE          # Prevents the computationally singular error
+)
+summary(sys_gmm_model_imputed_3_4, robust = TRUE)
+
+# now make these into a table
+library(dplyr)
+library(knitr)
+library(kableExtra)
+
+# Helper function to extract robust coefficients and SEs from pgmm summary
+extract_pgmm <- function(model, model_name) {
+  s <- summary(model, robust = TRUE)
+  coefs <- s$coefficients
+  
+  # coefs is a matrix with columns: Estimate, Std. Error, z-value, Pr(>|z|)
+  tibble(
+    model = model_name,
+    term = rownames(coefs),
+    estimate = coefs[, "Estimate"],
+    std_error = coefs[, "Std. Error"],
+    p_value = coefs[, "Pr(>|z|)"]
+  )
+}
+
+# Extract diagnostics (Sargan/Hansen, AR tests)
+extract_diagnostics <- function(model, model_name) {
+  s <- summary(model, robust = TRUE)
+  
+  # Sargan test
+  sargan_p <- if (!is.null(s$sargan)) s$sargan$p.value else NA
+  
+  # AR(1) and AR(2) tests
+  ar1_p <- if (!is.null(s$m1)) s$m1$p.value else NA
+  ar2_p <- if (!is.null(s$m2)) s$m2$p.value else NA
+  
+  tibble(
+    model = model_name,
+    sargan_p = sargan_p,
+    ar1_p = ar1_p,
+    ar2_p = ar2_p
+  )
+}
+
+# Stars function
+stars <- function(p) {
+  case_when(
+    p < 0.01 ~ "***",
+    p < 0.05 ~ "**",
+    p < 0.1  ~ "*",
+    TRUE     ~ ""
+  )
+}
+
+# ---- Define all models and names ----
+models <- list(
+  ab_model_crime_2_3, ab_model_crime_3_4,
+  ab_model_imputed_crime_2_3, ab_model_imputed_crime_3_4,
+  sys_gmm_model_2_3, sys_gmm_model_3_4,
+  sys_gmm_model_imputed_2_3, sys_gmm_model_imputed_3_4
+)
+
+model_names <- c(
+  "AB Log 2:3", "AB Log 3:4",
+  "AB Imp 2:3", "AB Imp 3:4",
+  "Sys Log 2:3", "Sys Log 3:4",
+  "Sys Imp 2:3", "Sys Imp 3:4"
+)
+
+# ---- Define clean labels for coefficient names ----
+term_labels <- c(
+  "lag(monthly_avg_taps, 1)"  = "Ridership$_{t-1}$",
+  "lag(monthly_avg_taps, 2)"  = "Ridership$_{t-2}$",
+  "lag(sum_TE_logs, 1)"       = "Crime (log)$_{t-1}$",
+  "lag(sum_TE_logs, 2)"       = "Crime (log)$_{t-2}$",
+  "lag(sum_TE_imputed, 1)"    = "Crime (imputed)$_{t-1}$",
+  "lag(sum_TE_imputed, 2)"    = "Crime (imputed)$_{t-2}$"
+)
+# Add any additional terms as needed — check with:
+# rownames(summary(ab_model_crime_2_3, robust = TRUE)$coefficients)
+
+# ---- Extract all coefficients ----
+all_coefs <- bind_rows(
+  Map(extract_pgmm, models, model_names)
+) %>%
+  # Normalize term names: "lag(monthly_avg_taps, 1:2)1" -> "lag(monthly_avg_taps, 1)"
+  mutate(term = gsub(",\\s*\\d+:\\d+\\)(\\d+)", ", \\1)", term)) %>%
+  mutate(term = ifelse(term %in% names(term_labels), term_labels[term], term))
+
+# ---- Extract all diagnostics ----
+all_diags <- bind_rows(
+  Map(extract_diagnostics, models, model_names)
+)
+
+# ---- Build the formatted table ----
+
+# Create formatted coefficient strings: "estimate*** \n (se)"
+all_coefs <- all_coefs %>%
+  mutate(
+    cell = paste0(
+      "\\makecell{", sprintf("%.4f", estimate), stars(p_value),
+      " \\\\ (", sprintf("%.4f", std_error), ")}"
+    )
+  )
+
+# Pivot to wide format
+coef_wide <- all_coefs %>%
+  select(model, term, cell) %>%
+  tidyr::pivot_wider(names_from = model, values_from = cell, values_fill = "")
+
+# Add diagnostics rows
+diag_rows <- all_diags %>%
+  tidyr::pivot_longer(cols = c(sargan_p, ar1_p, ar2_p), names_to = "term", values_to = "value") %>%
+  mutate(
+    term = recode(term,
+      "sargan_p" = "Sargan test (p)",
+      "ar1_p" = "AR(1) test (p)",
+      "ar2_p" = "AR(2) test (p)"
+    ),
+    cell = ifelse(is.na(value), "", sprintf("%.4f", value))
+  ) %>%
+  select(model, term, cell) %>%
+  tidyr::pivot_wider(names_from = model, values_from = cell, values_fill = "")
+
+# Add a placeholder row between coefficients and diagnostics
+placeholder_row <- tibble(term = "Your text here")
+for (nm in model_names) {
+  placeholder_row[[nm]] <- ""
+}
+
+# Combine: coefficients, then placeholder, then diagnostics
+final_table <- bind_rows(coef_wide, placeholder_row, diag_rows)
+
+# Track where the horizontal line should go (after last coefficient row)
+n_coef_rows <- nrow(coef_wide)
+
+# ---- Export as LaTeX ----
+latex_table <- kable(final_table, format = "latex", booktabs = TRUE, escape = FALSE,
+                     align = c("l", rep("c", length(model_names))),
+                     col.names = c("", model_names)) %>%
+  kable_styling(latex_options = c("scale_down", "hold_position"),
+                font_size = 10) %>%
+  add_header_above(c(" " = 1,
+                      "Arellano-Bond" = 4,
+                      "System GMM" = 4)) %>%
+  row_spec(n_coef_rows, hline_after = TRUE) %>%
+  footnote(general = "Robust standard errors in parentheses. * p$<$0.1, ** p$<$0.05, *** p$<$0.01",
+           escape = FALSE)
+
+# Or just print to console to copy-paste
+cat(as.character(latex_table))
+
+# Save to .tex file
+writeLines(as.character(latex_table), "Crime and night tubes/Output/Results/gmm_results_table.tex")
+
+##################################################################
+
+
+
 
 
 
