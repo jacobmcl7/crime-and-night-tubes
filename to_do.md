@@ -12,19 +12,27 @@ next things to do:
     - combine IV and levels estimation into one table
     - needs more informative tables/figures for the Data section
 
- - determine the paper's contribution targets
-
- - rewrite lit review to match the paper's contribution targets
-
  - write all the extra bits required in the draft
 
  - organise analysis and visualisation code better - make it clear what results go where
 
  - organise cleaning better
 
- - cut words (last, after making a new draft)
+ - cut words
 
  - make graphs and tables nicer
+
+ - clear up table 2
+
+ - make descriptive stats for TfL data
+
+ - rewrite data section to be more insightful and fit with marking criteria
+
+ - sort out tau vs beta notation
+
+ - mention magnitude of local effects?
+
+ - more...
 
 -------- NON-URGENT EXTRAS
 
