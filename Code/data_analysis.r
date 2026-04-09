@@ -2922,11 +2922,11 @@ setFixest_dict(my_dict)
 # make the table
 etable(
   as_reg_logs_levels, as_reg_logs, as_reg_logs_crime_1_2, as_reg_logs_crime_1_3, as_reg_logs_3,
-  as_reg_imputed, as_reg_imputed_crime_1_2, as_reg_imputed_crime_1_3, as_reg_imputed_3,
-  headers = c("Log", "Log", "Log", "Log", "Log", "Imputed", "Imputed", "Imputed", "Imputed"),
-  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
-          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
-          "fit_l\\(d(monthly_avg_taps)", "^d(monthly_avg_taps)"),
+  as_reg_imputed, as_reg_imputed_crime_1_2, as_reg_imputed_crime_1_3,
+  headers = c("Log", "Log", "Log", "Log", "Log", "Imputed", "Imputed", "Imputed"),
+  order = c("l(d(sum_TE_logs), 1)", "l(d(sum_TE_logs), 2)", "l(d(sum_TE_logs), 3)",
+          "l(d(sum_TE_imputed), 1)", "l(d(sum_TE_imputed), 2)", "l(d(sum_TE_imputed), 3)",
+          "fit_l(d(monthly_avg_taps, 1))"),
   tex = TRUE,
   file = "Crime and Night Tubes/Output/Results/behaviour_regressions_new.tex",
   fitstat = ~ r2 + n + ivwald,
