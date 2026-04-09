@@ -2661,6 +2661,18 @@ as_reg_logs_levels <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period 
                data = merged_data, cluster = ~ station)
 summary(as_reg_logs_levels, stage = 1:2)
 
+# use more lags of the crime count
+as_reg_logs_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:3) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_logs_crime_1_3, stage = 1:2)
+
+as_reg_logs_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:2) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_logs_crime_1_2, stage = 1:2)
+
+# EXTRAS:
 
 # use Arellano-Bond
 p_data <- pdata.frame(merged_data, index = c("station", "period"))
@@ -2748,10 +2760,21 @@ as_reg_imputed <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
 summary(as_reg_imputed, stage = 1:2)
 
 # use instruments further back
-as_reg_logs_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
+as_reg_imputed_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
                  l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 3),
                data = merged_data, cluster = ~ station)
-summary(as_reg_logs_3, stage = 1:2)
+summary(as_reg_imputed_3, stage = 1:2)
+
+# use more lags of the crime count
+as_reg_imputed_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:3) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_imputed_crime_1_3, stage = 1:2)
+
+as_reg_imputed_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:2) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_imputed_crime_1_2, stage = 1:2)
 
 # do Arellano-Bond for imputed TEs
 ab_model_imputed <- pgmm(
@@ -2878,6 +2901,41 @@ summary(sys_gmm_model_imputed_4_5, robust = TRUE)
 
 # do we need to instrument for crime count?
 
+# make a summary table for AH estimation
+
+# first make a dictionary for table labels
+my_dict <- c(
+  "l(d(sum_TE_logs), 1)"    = "$\\Delta$ Log TE$_{t-1}$",
+  "l(d(sum_TE_logs), 2)"    = "$\\Delta$ Log TE$_{t-2}$",
+  "l(d(sum_TE_logs), 3)"    = "$\\Delta$ Log TE$_{t-3}$",
+  "l(d(sum_TE_imputed), 1)" = "$\\Delta$ Imputed TE$_{t-1}$",
+  "l(d(sum_TE_imputed), 2)" = "$\\Delta$ Imputed TE$_{t-2}$",
+  "l(d(sum_TE_imputed), 3)" = "$\\Delta$ Imputed TE$_{t-3}$",
+  "fit_l(d(monthly_avg_taps), 1)"   = "$\\Delta$ Avg Taps$_{t-1}$ (fitted)",
+  "d(monthly_avg_taps)"             = "$\\Delta$ Avg Taps",
+  "station"                     = "Station",
+  "period"                      = "Period"
+)
+
+setFixest_dict(my_dict)
+
+# make the table
+etable(
+  as_reg_logs_levels, as_reg_logs, as_reg_logs_crime_1_2, as_reg_logs_crime_1_3, as_reg_logs_3,
+  as_reg_imputed, as_reg_imputed_crime_1_2, as_reg_imputed_crime_1_3, as_reg_imputed_3,
+  headers = c("Log", "Log", "Log", "Log", "Log", "Imputed", "Imputed", "Imputed", "Imputed"),
+  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
+          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
+          "fit_l\\(d(monthly_avg_taps)", "^d(monthly_avg_taps)"),
+  tex = TRUE,
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_new.tex",
+  fitstat = ~ r2 + n + ivwald,
+  title = "Effect of lagged treatment intensity on ridership changes",
+  label = "tab:behaviour_results",
+  fontsize = "footnotesize"
+)
+
+# add a line that gives which instruments are used for each regression
 
 
 
