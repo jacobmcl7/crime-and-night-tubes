@@ -2167,8 +2167,6 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_grid.png", widt
 
 # 14) now examine the ridership data and the aggregated station-level imputed crime effect
 
-# NOTE - THIS COULD BE WRONG. THE SPECIFICATION SEEMS INCORRECT
-
 # load in the ridership data
 ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
 
@@ -2187,422 +2185,7 @@ first_stage_data <- final_data %>%
 # do the regression
 first_stage_logs <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
 
-# also do a Poisson regression (THOUGH ISSUES WITH THIS)
-first_stage_Poisson <- feglm(theft_robbery ~ 1 | location + Month, data = first_stage_data, family = poisson)
-# 17,154 locations (c. 500,000 observations) removed because of only 0 outcomes (no thefts or robberies ever)
-# 587,489 observations left
-
-# get the fitted values and residuals for the whole data, for both regressions
-final_data <- final_data %>%
-  mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
-  mutate(residuals = log_theft_robbery - fitted_vals) %>%
-  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = final_data)) %>%
-  mutate(residuals_poisson = theft_robbery - fitted_poisson) %>%
-  mutate(residuals_imputed = theft_robbery - exp(fitted_vals) + 1)
-
-# also impute levels TEs from log regression? Maybe subject to same issue as Poisson, but worth doing
-
-# we do the following analysis on 2017 data, so first drop all earlier years and untreated observations
-behaviour_data <- final_data %>%
-  filter(period >= 25) %>%  # i.e. from 2017 onwards
-  filter(event_time_1 >= 0)  # i.e. only treated observations
-
-# now do the station-level aggregation
-
-# split the data up by station, so that we have one row per station-month, with a column for the imputed treatment effect
-# then aggregate to get the average imputed treatment effect for all observations within 0.5km of each station, by month
-station_ATT_data <- behaviour_data %>%
-  # Split the comma-separated station names into one row per station
-  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
-  # Group by station and time period
-  group_by(stations_within_0.5km, period) %>%
-  # Calculate sums of the imputed treatment effects (i.e. the residuals) for each station-month combo
-  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
-  ungroup() %>%
-  rename(station = stations_within_0.5km)
-
-# now we have two sets of station-level data, and we need to merge them
-
-# first check the station naming in both datasets, and clean if necessary
-# # get the unique station names in each dataset
-# unique_stations_ridership <- unique(ridership_data$`station`)
-# unique_stations_ATT <- unique(station_ATT_data$station)
-# # print them out to check
-# print(unique_stations_ridership)
-# print(unique_stations_ATT)
-# the ATT data has more, because it includes also untreated stations near treated ones
-# these will be dropped as they aren't relevant for this
-# the relevant cleaning is done in the TfL cleaning file
-
-# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4 (which was in the ridership data but not in the final data - work out why)
-# do this via an inner join, to drop unmatched stations on both sides (which will also drop Heathrow T4)
-merged_data <- ridership_data %>%
-  inner_join(
-    station_ATT_data,
-    by = c("station", "period")
-  )
-
-# correct number of observations in the merged dataset - only the 12 from Heathrow T4 were lost from the ridership data
-
-# note: unclear what lag function we need to use below, but it isn't plm lag
-detach("package:plm", unload = TRUE)
-# the base one, whatever it is, works
-
-# now create a variable giving the proportional and the level change in ridership compared to the previous period, for each station
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(station, period) %>%
-  mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
-  ungroup()
-
-# now do the same for proportional change in the imputed treatment effect (generating separate ones for each type of TE)
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(period) %>%
-  mutate(change_sum_TE_logs = sum_TE_logs - lag(sum_TE_logs)) %>%
-  mutate(change_sum_TE_poisson = sum_TE_poisson - lag(sum_TE_poisson)) %>%
-  mutate(change_sum_TE_imputed = sum_TE_imputed - lag(sum_TE_imputed)) %>%
-  ungroup()
-
-# reattach plm
-library(plm)
-
-# finally, declare the merged data as a panel
-merged_data <- panel(merged_data, ~ station + period)
-
-# now ready for regressions
-
-# Q: WHAT SEs TO USE?
-  # without lagged dep.vars, just cluster by station
-# also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
-  # Arellano-Bond for this
-  # presume we need to get some controls in too
-
-# first analyse the sum of log TEs (without lagged dep vars)
-behaviour_logs_1lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_1lag)
-
-behaviour_logs_2lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_2lag)
-
-behaviour_logs_3lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) + l(change_sum_TE_logs, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_3lag)
-
-# now do it for the sum of imputed TEs from the log regression
-behaviour_imputed_1lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_1lag)
-
-behaviour_imputed_2lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_2lag)
-
-behaviour_imputed_3lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) + l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_3lag)
-
-# now do it for the sum of Poisson TEs (again without LDVs)
-behaviour_poisson_1lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_1lag)
-
-behaviour_poisson_2lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_2lag)
-
-behaviour_poisson_3lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) + l(change_sum_TE_poisson, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_3lag)
-
-# I think this should be proportional change maybe? Or find controls? What is the issue here?
-
-# do Anderson-Hsiao for log TEs
-as_reg_logs <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_logs, stage = 1:2)
-
-# do Anderson-Hsiao for imputed TEs
-as_reg_imputed <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_imputed, stage = 1:2)
-
-# do Anderson-Hsiao for Poisson TEs
-as_reg_poisson <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_poisson, stage = 1:2)
-
-
-# make a regression table for these
-
-# first make a dictionary for table labels
-my_dict <- c(
-  "l(change_sum_TE_logs, 1)"    = "$\\Delta$ Log TE$_{t-1}$",
-  "l(change_sum_TE_logs, 2)"    = "$\\Delta$ Log TE$_{t-2}$",
-  "l(change_sum_TE_logs, 3)"    = "$\\Delta$ Log TE$_{t-3}$",
-  "l(change_sum_TE_imputed, 1)" = "$\\Delta$ Imputed TE$_{t-1}$",
-  "l(change_sum_TE_imputed, 2)" = "$\\Delta$ Imputed TE$_{t-2}$",
-  "l(change_sum_TE_imputed, 3)" = "$\\Delta$ Imputed TE$_{t-3}$",
-  "fit_l(change_avg_taps, 1)"   = "$\\Delta$ Avg Taps$_{t-1}$ (fitted)",
-  "change_avg_taps"             = "$\\Delta$ Avg Taps",
-  "station"                     = "Station",
-  "period"                      = "Period"
-)
-
-setFixest_dict(my_dict)
-
-# make the table
-etable(
-  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag, as_reg_logs,
-  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag, as_reg_imputed,
-  headers = c("Log", "Log", "Log", "AH: Log", "Imputed", "Imputed", "Imputed", "AH: Imputed"),
-  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
-          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
-          "fit_l\\(change_avg_taps", "^change_avg_taps"),
-  tex = TRUE,
-  file = "Crime and Night Tubes/Output/Results/behaviour_regressions.tex",
-  fitstat = ~ r2 + n + ivwald,
-  title = "Effect of lagged treatment intensity on ridership changes",
-  label = "tab:behaviour_results",
-  fontsize = "footnotesize"
-)
-
-
-
-
-##### BELOW IS REDUNDANT UNLESS WE DO ARELLANO BOND
-
-
-# do Arellano-Bond
-# merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
-# ab_reg_logs <- pgmm(
-#   change_avg_taps ~ plm::lag(change_avg_taps, 1) + plm::lag(change_sum_TE_logs, 1) |
-#     plm::lag(change_avg_taps, 2:5),  # instruments: deeper lags of the dependent variable
-#   data = merged_pdata,
-#   effect = "individual",  # two-way fixed effects doesn't work here!!
-#   model = "twosteps",
-#   transformation = "d"  # Arellano-Bond
-# )
-# summary(ab_reg_logs, robust = TRUE)
-
-# why is the system computationally singular? it is the introduction of twoway FEs - the introduction of time dummies leads to multicollinearity
-# there must be something else that is unit-invariant
-# also even without TWFEs the inverses in first and second stage are singular - why?
-# note that when we use just one lag, the AR(2) test is insignificant, as required - gets worse with more lags
-# also adding levels of the dependent variable introduces singluarity too
-
-# could we do Arellano-Bond in levels? I guess the levels effect and the differences effect are similar (at least same sign)
-
-# merged_pdata <- pdata.frame(merged_data, index = c("station", "period"))
-# ab_reg_logs <- pgmm(
-#   avg_monthly_taps ~ plm::lag(avg_monthly_taps, 1) + plm::lag(sum_TE_logs, 1) |
-#     plm::lag(avg_monthly_taps, 2:5),  # instruments: deeper lags of the dependent variable
-#   data = merged_pdata,
-#   effect = "twoways",  # two-way fixed effects
-#   model = "twosteps",
-#   transformation = "d"  # Arellano-Bond
-# )
-# summary(ab_reg_logs, robust = TRUE)
-
-
-#########################################################################
-
-
-# 14a) now do the same, but with residuals from a regression with controls
-
-# load in the ridership data
-ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
-
-# now get the imputed treatment effect for each location-month
-
-# get the outcome variable ready
-final_data <- final_data %>%
-  mutate(theft_robbery = theft_from_the_person + robbery) %>%
-  mutate(log_theft_robbery = log(theft_robbery + 1))
-
-# subset the data to pre-treatment observations, as before
-first_stage_data <- final_data %>%
-  filter(event_time_1 < 0) %>%
-  select(location, Month, theft_robbery, log_theft_robbery, IMD, income_rank, education_rank, health_rank, barriers_rank, living_env_rank, pop_density, prop_same_eth_group, single_adult_hh_prop, avg_health_score, avg_age)
-
-# do the regressions
-first_stage_logs <- feols(log_theft_robbery ~ i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = first_stage_data)
-first_stage_Poisson <- feglm(theft_robbery ~ i(Month, IMD) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month, data = first_stage_data, family = poisson)
-# 17,154 locations (c. 500,000 observations) removed because of only 0 outcomes (no thefts or robberies ever)
-# 587,489 observations left
-
-# get the fitted values and residuals for the whole data
-final_data <- final_data %>%
-  mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
-  mutate(residuals = log_theft_robbery - fitted_vals) %>%
-  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = final_data)) %>%
-  mutate(residuals_poisson = theft_robbery - fitted_poisson) %>%
-  mutate(residuals_imputed = theft_robbery - exp(fitted_vals) + 1)
-
-# we do the following analysis on 2017 data, so first drop all earlier years and untreated observations
-behaviour_data <- final_data %>%
-  filter(period >= 25) %>%  # i.e. from 2017 onwards
-  filter(event_time_1 >= 0)  # i.e. only treated observations
-
-# now do the station-level aggregation
-station_ATT_data <- behaviour_data %>%
-  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
-  group_by(stations_within_0.5km, period) %>%
-  summarise(sum_TE_logs = sum(residuals), sum_TE_poisson = sum(residuals_poisson, na.rm = TRUE), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
-  ungroup() %>%
-  rename(station = stations_within_0.5km)
-
-# now merge with the station data from above
-merged_data <- ridership_data %>%
-  inner_join(
-    station_ATT_data,
-    by = c("station", "period")
-  )
-
-
-detach("package:plm", unload = TRUE)
-
-# now create a variable giving the proportional and the level change in ridership compared to the previous period, for each station
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(station, period) %>%
-  mutate(change_avg_taps = monthly_avg_taps - lag(monthly_avg_taps)) %>%
-  ungroup()
-
-# now do the same for proportional change in the imputed treatment effect (generating separate ones for each type of TE)
-merged_data <- merged_data %>%
-  group_by(station) %>%
-  arrange(period) %>%
-  mutate(change_sum_TE_logs = sum_TE_logs - lag(sum_TE_logs)) %>%
-  mutate(change_sum_TE_poisson = sum_TE_poisson - lag(sum_TE_poisson)) %>%
-  mutate(change_sum_TE_imputed = sum_TE_imputed - lag(sum_TE_imputed)) %>%
-  ungroup()
-
-# reattach plm
-library(plm)
-
-# finally, declare the merged data as a panel
-merged_data <- panel(merged_data, ~ station + period)
-
-# now ready for regressions
-
-# Q: WHAT SEs TO USE?
-  # without lagged dep.vars, just cluster by station
-# also: CAREFUL WITH BIAS, SEs ETC!! (lags of dependent variables etc)
-  # Arellano-Bond for this
-  # presume we need to get some controls in too
-
-# first analyse the sum of log TEs (without lagged dep vars)
-behaviour_logs_1lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_1lag)
-
-behaviour_logs_2lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_2lag)
-
-behaviour_logs_3lag <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) + l(change_sum_TE_logs, 2) + l(change_sum_TE_logs, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_logs_3lag)
-
-# now do it for the sum of imputed TEs from the log regression
-behaviour_imputed_1lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_1lag)
-
-behaviour_imputed_2lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_2lag)
-
-behaviour_imputed_3lag <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) + l(change_sum_TE_imputed, 2) + l(change_sum_TE_imputed, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_imputed_3lag)
-
-# now do it for the sum of Poisson TEs (again without LDVs)
-behaviour_poisson_1lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_1lag)
-
-behaviour_poisson_2lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_2lag)
-
-behaviour_poisson_3lag <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) + l(change_sum_TE_poisson, 2) + l(change_sum_TE_poisson, 3) | station + period, data = merged_data, cluster = ~ station)
-summary(behaviour_poisson_3lag)
-
-# I think this should be proportional change maybe? Or find controls? What is the issue here?
-
-# do Anderson-Hsiao for log TEs
-as_reg_logs <- feols(change_avg_taps ~ l(change_sum_TE_logs, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_logs, stage = 1:2)
-
-# do Anderson-Hsiao for imputed TEs
-as_reg_imputed <- feols(change_avg_taps ~ l(change_sum_TE_imputed, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_imputed, stage = 1:2)
-
-# do Anderson-Hsiao for Poisson TEs
-as_reg_poisson <- feols(change_avg_taps ~ l(change_sum_TE_poisson, 1) | station + period | 
-                 l(change_avg_taps, 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-
-summary(as_reg_poisson, stage = 1:2)
-
-
-# make a regression table for these
-
-# first make a dictionary for table labels
-my_dict <- c(
-  "l(change_sum_TE_logs, 1)"    = "$\\Delta$ Log TE$_{t-1}$",
-  "l(change_sum_TE_logs, 2)"    = "$\\Delta$ Log TE$_{t-2}$",
-  "l(change_sum_TE_logs, 3)"    = "$\\Delta$ Log TE$_{t-3}$",
-  "l(change_sum_TE_imputed, 1)" = "$\\Delta$ Imputed TE$_{t-1}$",
-  "l(change_sum_TE_imputed, 2)" = "$\\Delta$ Imputed TE$_{t-2}$",
-  "l(change_sum_TE_imputed, 3)" = "$\\Delta$ Imputed TE$_{t-3}$",
-  "fit_l(change_avg_taps, 1)"   = "$\\Delta$ Avg Taps$_{t-1}$ (fitted)",
-  "change_avg_taps"             = "$\\Delta$ Avg Taps",
-  "station"                     = "Station",
-  "period"                      = "Period"
-)
-
-setFixest_dict(my_dict)
-
-# make the table
-etable(
-  behaviour_logs_1lag, behaviour_logs_2lag, behaviour_logs_3lag, as_reg_logs,
-  behaviour_imputed_1lag, behaviour_imputed_2lag, behaviour_imputed_3lag, as_reg_imputed,
-  headers = c("Log", "Log", "Log", "AH: Log", "Imputed", "Imputed", "Imputed", "AH: Imputed"),
-  order = c("TE_logs, 1", "TE_logs, 2", "TE_logs, 3",
-          "TE_imputed, 1", "TE_imputed, 2", "TE_imputed, 3",
-          "fit_l\\(change_avg_taps", "^change_avg_taps"),
-  tex = TRUE,
-  file = "Crime and Night Tubes/Output/Results/behaviour_regressions.tex",
-  fitstat = ~ r2 + n + ivwald,
-  title = "Effect of lagged treatment intensity on ridership changes",
-  label = "tab:behaviour_results",
-  fontsize = "footnotesize"
-)
-
-
-##################################################################
-
-# 14new) do this all for the equation in levels
-
-# load in the ridership data
-ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
-
-# now get the imputed treatment effect for each location-month
-
-# get the outcome variable ready
-final_data <- final_data %>%
-  mutate(theft_robbery = theft_from_the_person + robbery) %>%
-  mutate(log_theft_robbery = log(theft_robbery + 1))
-
-# subset the data to pre-treatment observations, as before
-first_stage_data <- final_data %>%
-  filter(event_time_1 < 0) %>%
-  select(location, Month, theft_robbery, log_theft_robbery)
-
-# do the regression
-first_stage_logs <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
-
-# get the fitted values and residuals for the whole data, for both regressions
+# get the fitted values and residuals for the whole data, as well as the imputed treatment effects
 final_data <- final_data %>%
   mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
   mutate(residuals = log_theft_robbery - fitted_vals) %>%
@@ -2643,6 +2226,12 @@ merged_data <- panel(merged_data, ~ station + period)
 
 # start with just log TEs
 
+# first try instrumenting with levels (to show it isn't strong enough)
+as_reg_logs_levels <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(monthly_avg_taps, 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_logs_levels, stage = 1:2)
+
 # do Anderson-Hsiao for log TEs, starting with the simplest version
 as_reg_logs <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
                  l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
@@ -2655,50 +2244,20 @@ as_reg_logs_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
                data = merged_data, cluster = ~ station)
 summary(as_reg_logs_3, stage = 1:2)
 
-# try instrumenting with levels
-as_reg_logs_levels <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1) | period |
-                 l(d(monthly_avg_taps), 1) ~ l(monthly_avg_taps, 2),
-               data = merged_data, cluster = ~ station)
-summary(as_reg_logs_levels, stage = 1:2)
-
-# use more lags of the crime count
-as_reg_logs_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:3) | period |
-                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
-               data = merged_data, cluster = ~ station)
-summary(as_reg_logs_crime_1_3, stage = 1:2)
-
+# try with more lags of the crime count
 as_reg_logs_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:2) | period |
                  l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
                data = merged_data, cluster = ~ station)
 summary(as_reg_logs_crime_1_2, stage = 1:2)
 
-
-# now do it for imputed TEs
-as_reg_imputed <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
+as_reg_logs_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_logs), 1:3) | period |
                  l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
                data = merged_data, cluster = ~ station)
-summary(as_reg_imputed, stage = 1:2)
+summary(as_reg_logs_crime_1_3, stage = 1:2)
 
-# use instruments further back
-as_reg_imputed_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
-                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 3),
-               data = merged_data, cluster = ~ station)
-summary(as_reg_imputed_3, stage = 1:2)
+# make a regression table of these results
 
-# use more lags of the crime count
-as_reg_imputed_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:3) | period |
-                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
-               data = merged_data, cluster = ~ station)
-summary(as_reg_imputed_crime_1_3, stage = 1:2)
-
-as_reg_imputed_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:2) | period |
-                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
-               data = merged_data, cluster = ~ station)
-summary(as_reg_imputed_crime_1_2, stage = 1:2)
-
-
-# now make a summary table for AH estimation
-# first make a dictionary for table labels
+# first make a dictionary for table labels (including the labels for the later table with imputed effects)
 my_dict <- c(
   "l(d(sum_TE_logs), 1)"    = "$\\Delta$ Log TE$_{t-1}$",
   "l(d(sum_TE_logs), 2)"    = "$\\Delta$ Log TE$_{t-2}$",
@@ -2717,30 +2276,117 @@ setFixest_dict(my_dict)
 # make the table
 etable(
   as_reg_logs_levels, as_reg_logs, as_reg_logs_crime_1_2, as_reg_logs_crime_1_3, as_reg_logs_3,
-  as_reg_imputed, as_reg_imputed_crime_1_2, as_reg_imputed_crime_1_3,
-  headers = c("Log", "Log", "Log", "Log", "Log", "Imputed", "Imputed", "Imputed"),
   order = c("l(d(sum_TE_logs), 1)", "l(d(sum_TE_logs), 2)", "l(d(sum_TE_logs), 3)",
-          "l(d(sum_TE_imputed), 1)", "l(d(sum_TE_imputed), 2)", "l(d(sum_TE_imputed), 3)",
           "fit_l(d(monthly_avg_taps, 1))"),
   tex = TRUE,
-  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_new.tex",
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_logs.tex",
   fitstat = ~ r2 + n + ivwald,
   title = "Effect of lagged treatment intensity on ridership changes",
-  label = "tab:behaviour_results",
+  label = "tab:behaviour_results_logs",
   fontsize = "footnotesize"
 )
 
 # add a line that gives which instruments are used for each regression
 
-####################################################################
+
+# now do regressions with the imputed TEs, to get a ballpark figure for the magnitude of the effect
+
+# now do it for imputed TEs, with 1, 2, 3 lags of the crime count
+as_reg_imputed <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_imputed, stage = 1:2)
+
+as_reg_imputed_crime_1_2 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:2) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_imputed_crime_1_2, stage = 1:2)
+
+as_reg_imputed_crime_1_3 <- feols(d(monthly_avg_taps) ~ l(d(sum_TE_imputed), 1:3) | period |
+                 l(d(monthly_avg_taps), 1) ~ l(d(monthly_avg_taps), 2),
+               data = merged_data, cluster = ~ station)
+summary(as_reg_imputed_crime_1_3, stage = 1:2)
+
+# make the table
+etable(
+  as_reg_imputed, as_reg_imputed_crime_1_2, as_reg_imputed_crime_1_3,
+  order = c("l(d(sum_TE_imputed), 1)", "l(d(sum_TE_imputed), 2)", "l(d(sum_TE_imputed), 3)",
+          "fit_l(d(monthly_avg_taps, 1))"),
+  tex = TRUE,
+  file = "Crime and Night Tubes/Output/Results/behaviour_regressions_imputed.tex",
+  fitstat = ~ r2 + n + ivwald,
+  title = "Effect of lagged treatment intensity on ridership changes",
+  label = "tab:behaviour_results_imputed",
+  fontsize = "footnotesize"
+)
+
+################################################################
 
 
 
-# EXTRAS:
 
-# use Arellano-Bond, with instrumentation for the lagged crime count too (as this is predetermined)
+
+
+# 14a) now do robustness with Arellano-Bond and Blundell-Bond
+
+# load in the ridership data
+ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
+
+# now get the imputed treatment effect for each location-month
+
+# get the outcome variable ready
+final_data <- final_data %>%
+  mutate(theft_robbery = theft_from_the_person + robbery) %>%
+  mutate(log_theft_robbery = log(theft_robbery + 1))
+
+# subset the data to pre-treatment observations, as before
+first_stage_data <- final_data %>%
+  filter(event_time_1 < 0) %>%
+  select(location, Month, theft_robbery, log_theft_robbery)
+
+# do the regression
+first_stage_logs <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
+
+# get the fitted values and residuals for the whole data
+final_data <- final_data %>%
+  mutate(fitted_vals = predict(first_stage_logs, newdata = final_data)) %>%
+  mutate(residuals = log_theft_robbery - fitted_vals) %>%
+  mutate(residuals_imputed = theft_robbery - exp(fitted_vals) + 1)
+
+# we do the following analysis on 2017 data, so first drop all earlier years and untreated observations
+behaviour_data <- final_data %>%
+  filter(period >= 25) %>%  # i.e. from 2017 onwards
+  filter(event_time_1 >= 0)  # i.e. only treated observations
+
+# now do the station-level aggregation
+
+# split the data up by station, so that we have one row per station-month, with a column for the imputed treatment effect
+# then aggregate to get the average imputed treatment effect for all observations within 0.5km of each station, by month
+station_ATT_data <- behaviour_data %>%
+  # Split the comma-separated station names into one row per station
+  separate_rows(stations_within_0.5km, sep = ",\\s*") %>%  # now each row is a location-time-station combination
+  # Group by station and time period
+  group_by(stations_within_0.5km, period) %>%
+  # Calculate sums of the imputed treatment effects (i.e. the residuals) for each station-month combo
+  summarise(sum_TE_logs = sum(residuals), sum_TE_imputed = sum(residuals_imputed)) %>% # we have to remove NAs here for Poisson!!
+  ungroup() %>%
+  rename(station = stations_within_0.5km)
+
+# now we have two sets of station-level data, and we need to merge them
+# now merge, dropping everything unmatched from the ATT data (i.e. untreated stations), and Heathrow T4 (which was in the ridership data but not in the final data - work out why)
+# do this via an inner join, to drop unmatched stations on both sides (which will also drop Heathrow T4)
+merged_data <- ridership_data %>%
+  inner_join(
+    station_ATT_data,
+    by = c("station", "period")
+  )
+
+# finally, declare the merged data as a panel
 p_data <- pdata.frame(merged_data, index = c("station", "period"))
 
+# now ready for regressions
+
+# use Arellano-Bond, with instrumentation for the lagged crime count too (as this is predetermined)
 ab_model_crime_2_3 <- pgmm(
   monthly_avg_taps ~ lag(monthly_avg_taps, 1) + lag(sum_TE_logs, 1:2) | lag(monthly_avg_taps, 2:3) + lag(sum_TE_logs, 3:4),
   data = p_data,
@@ -2777,7 +2423,6 @@ ab_model_imputed_crime_3_4 <- pgmm(
   transformation = "d"    # Automatically takes the first-difference of the entire equation
 )
 summary(ab_model_imputed_crime_3_4, robust = TRUE)
-
 
 
 # now try system GMM - first with log TEs
@@ -2973,6 +2618,8 @@ cat(as.character(latex_table))
 writeLines(as.character(latex_table), "Crime and night tubes/Output/Results/gmm_results_table.tex")
 
 ##################################################################
+
+
 
 
 
