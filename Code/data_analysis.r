@@ -1385,6 +1385,8 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_crimes_grid.png", width = 2
 
 # 10d) now do it with controls for all crimes with TWFE
 
+# first with constructed controls as well as IMD
+
 crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
  "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
  "possession_of_weapons", "bicycle_theft", "drugs", "public_order",                
@@ -1426,8 +1428,16 @@ for (crime in crime_types) {
 # save this
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid_controls_constructed_imd.png", width = 22, height = 12)
 
+# also plot theft and robbery together with these controls
+(plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 2)
 
-# now do it with all possible crimes
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery_controls_constructed_imd.png", width = 12, height = 6)
+
+###############################################################
+
+# now do it with all possible controls
 
 for (crime in crime_types) {
   
@@ -1465,8 +1475,59 @@ for (crime in crime_types) {
 # save this
 ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid_controls_all.png", width = 22, height = 12)
 
+# again also plot theft and robbery together with these controls
+(plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 2)
 
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery_controls_all.png", width = 12, height = 6)
 
+###########################################################
+
+# now do it just for constructed controls
+
+for (crime in crime_types) {
+  
+  # create the formula
+  formula_imd_constructed <- as.formula(paste0("`log_", crime, "` ~ i(event_time_1, ref = -1) + i(Month, pop_density) + i(Month, single_adult_hh_prop) + i(Month, avg_age) + i(Month, prop_same_eth_group) + i(Month, avg_health_score) | location + Month"))
+  
+  # run the regression
+  model <- feols(formula_imd_constructed, data = final_data, cluster = "location")
+  
+  # prepare the coefficients for plotting
+  coefs <- plot_prepare(model, substring = "event_time_1")
+  
+  # save and plot the graph
+  assign(paste0("plot_", crime), plot(coefs = coefs, 
+      xsequence = seq(-20, 15, 5), 
+      ymin = -0.05,
+      ymax = 0.05,
+      title = gsub("_", " ", crime),
+      note = "Simple treatment definition, theshold = 1km"))
+  # now print the plot in the loop
+  print(get(paste0("plot_", crime)))
+  
+  # print a message to indicate completion
+  print(paste0("Done for ", crime))
+  
+}
+
+# now plot them all in one big grid
+(plot_violence_and_sexual_offences + plot_vehicle_crime + plot_other_theft + plot_burglary +
+ `plot_anti-social_behaviour` + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
+ plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
+ plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 5)
+
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid_controls_constructed.png", width = 22, height = 12)
+
+# also plot theft and robbery together with these controls
+(plot_theft_from_the_person + plot_robbery) +
+  plot_layout(ncol = 2) 
+
+# save this
+ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery_controls_constructed.png", width = 12, height = 6)
 
 
 
