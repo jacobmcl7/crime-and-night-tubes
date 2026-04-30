@@ -1246,3 +1246,33 @@ ggplot(police_response_data, aes(x = period, y = solve_rate)) +
   theme_bw()
 
 # this shows the dataset needs updating
+
+
+
+
+
+
+##############################################################
+
+# now visualise the TfL data
+ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
+
+# get a histogram of average weekly ridership across stations
+
+# first get the average across each month-date combo for each station
+ridership_data <- ridership_data %>%
+  group_by(station) %>%
+  summarise(avg_weekly_ridership = mean(monthly_avg_taps, na.rm = TRUE)) %>%
+  ungroup()
+  # this is a bit faulty because I took averages to get avg monthly ridership first, and there aren't the same number of recorded weekends each month
+
+# now plot the histogram
+ggplot(ridership_data, aes(x = avg_weekly_ridership)) +
+  geom_histogram(binwidth = 2500, fill = "blue", color = "black", alpha = 0.5, boundary = 0) +
+  labs(title = "Distribution of Average Weekly Ridership Across Night Tube Stations",
+       x = "Average Weekly Ridership",
+       y = "Number of Stations") +
+  theme_bw()
+
+# save it
+ggsave("Crime and night tubes/Output/Figures/night_tube_ridership_histogram.png", width = 8, height = 6)
