@@ -1,48 +1,39 @@
 to do list:
 
 next things to do:
- - finish off all analysis
+
+ - final bits for submission
+    - do Conley TWFE/A+S for extra robustness (with various kernels) (decide whether to)
+    - redo controls estimation with BJS/A+S
+    - do the bias-variance tradeoff analysis
+    - finish final table formatting
+    - finish estimator theory
+    - do the writeup for the estimator results
+    - check we have fit with marking criteria
+    - mention magnitude of local effects?
+    - cut words
+    - make graphs and tables nicer - formatting, titles, captions, descriptions
+    - do bibliography
+
+ - do extra parts of the analysis
     - do T+R result with different groups of controls for robustness
-    - do the crime grid with different groups of controls for robustness
-    - run BJS with clustered SEs at the location level
-    - do Conley TWFE/A+S for extra robustness (with various kernels)
     - do robustness of main result via BJS with other clustering levels
     - make a heatmap for visualisation
-    - do the last parts for different distance thresholds, for robustness
-    - combine IV and levels estimation into one table
-    - needs more informative tables/figures for the Data section
-
- - write all the extra bits required in the draft
-
- - cut words
-
- - make graphs and tables nicer
-
- - make descriptive stats for TfL data (for appendix)
-
- - work out how to frame heuristic estimation of effects
-
- - mention magnitude of local effects?
-
- - include limitations and paths for future research
-
- - check we have fit with marking criteria
+    - make descriptive stats for TfL data (for appendix) (?)
 
  - organise analysis and visualisation code better - make it clear what results go where
 
- - organise cleaning better
+ - organise cleaning code better
 
  - more...
 
 -------- NON-URGENT EXTRAS
 
- - see if Arellano-Bond works
-
  - sort out issues with the covariance matrix not being positive def in the estimation with controls
 
  - determine asymptotic normality of density estimator
 
- - check all data construction
+ - check all data construction again
 
  - get all notes into one place (merge Overleaf to Notion)
 
