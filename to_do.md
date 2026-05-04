@@ -6,7 +6,6 @@ next things to do:
     - do Conley TWFE/A+S for extra robustness (with various kernels) (decide whether to)
     - redo controls estimation with BJS/A+S
     - do the bias-variance tradeoff analysis
-    - finish final table formatting
     - check we have fit with marking criteria
     - mention magnitude of local effects?
     - cut words

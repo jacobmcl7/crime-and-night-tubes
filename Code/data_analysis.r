@@ -2528,7 +2528,9 @@ sys_gmm_model_imputed_3_4 <- pgmm(
 )
 summary(sys_gmm_model_imputed_3_4, robust = TRUE)
 
-# now make these into a table
+
+
+# now make these into a table - DIFFICULT AND LONG BECAUSE OF PGMM PACKAGE, SO HAVE TO DO IT MANUALLY
 library(dplyr)
 library(knitr)
 library(kableExtra)
@@ -2548,20 +2550,16 @@ extract_pgmm <- function(model, model_name) {
   )
 }
 
-# Extract diagnostics (Sargan/Hansen, AR tests)
+# Extract diagnostics (AR tests)
 extract_diagnostics <- function(model, model_name) {
   s <- summary(model, robust = TRUE)
-  
-  # Sargan test
-  sargan_p <- if (!is.null(s$sargan)) s$sargan$p.value else NA
-  
+
   # AR(1) and AR(2) tests
   ar1_p <- if (!is.null(s$m1)) s$m1$p.value else NA
   ar2_p <- if (!is.null(s$m2)) s$m2$p.value else NA
   
   tibble(
     model = model_name,
-    sargan_p = sargan_p,
     ar1_p = ar1_p,
     ar2_p = ar2_p
   )
@@ -2586,20 +2584,20 @@ models <- list(
 )
 
 model_names <- c(
-  "AB Log 2:3", "AB Log 3:4",
-  "AB Imp 2:3", "AB Imp 3:4",
-  "Sys Log 2:3", "Sys Log 3:4",
-  "Sys Imp 2:3", "Sys Imp 3:4"
+  "AB Log 1,2", "AB Log 2,2",
+  "AB Imp 1,2", "AB Imp 2,2",
+  "Sys Log 1,2", "Sys Log 2,2",
+  "Sys Imp 1,2", "Sys Imp 2,2"
 )
 
 # ---- Define clean labels for coefficient names ----
 term_labels <- c(
-  "lag(monthly_avg_taps, 1)"  = "Ridership$_{t-1}$",
-  "lag(monthly_avg_taps, 2)"  = "Ridership$_{t-2}$",
-  "lag(sum_TE_logs, 1)"       = "Crime (log)$_{t-1}$",
-  "lag(sum_TE_logs, 2)"       = "Crime (log)$_{t-2}$",
-  "lag(sum_TE_imputed, 1)"    = "Crime (imputed)$_{t-1}$",
-  "lag(sum_TE_imputed, 2)"    = "Crime (imputed)$_{t-2}$"
+  "lag(monthly_avg_taps, 1)"  = "$taps_{s,t-1}$",
+  "lag(monthly_avg_taps, 2)"  = "$taps_{s,t-2}$",
+  "lag(sum_TE_logs, 1)"       = "$\\hat{\\tau}_{s,t-1}$ (in logs)",
+  "lag(sum_TE_logs, 2)"       = "$\\hat{\\tau}_{s,t-2}$ (in logs)",
+  "lag(sum_TE_imputed, 1)"    = "$\\hat{\\tau}_{s,t-1}$ (in imp. levels)",
+  "lag(sum_TE_imputed, 2)"    = "$\\hat{\\tau}_{s,t-2}$ (in imp. levels)"
 )
 # Add any additional terms as needed — check with:
 # rownames(summary(ab_model_crime_2_3, robust = TRUE)$coefficients)
@@ -2635,10 +2633,9 @@ coef_wide <- all_coefs %>%
 
 # Add diagnostics rows
 diag_rows <- all_diags %>%
-  tidyr::pivot_longer(cols = c(sargan_p, ar1_p, ar2_p), names_to = "term", values_to = "value") %>%
+  tidyr::pivot_longer(cols = c(ar1_p, ar2_p), names_to = "term", values_to = "value") %>%
   mutate(
     term = recode(term,
-      "sargan_p" = "Sargan test (p)",
       "ar1_p" = "AR(1) test (p)",
       "ar2_p" = "AR(2) test (p)"
     ),
@@ -2647,11 +2644,12 @@ diag_rows <- all_diags %>%
   select(model, term, cell) %>%
   tidyr::pivot_wider(names_from = model, values_from = cell, values_fill = "")
 
-# Add a placeholder row between coefficients and diagnostics
-placeholder_row <- tibble(term = "Your text here")
-for (nm in model_names) {
-  placeholder_row[[nm]] <- ""
-}
+# Add an IVs label row between coefficients and diagnostics
+iv_labels <- c("Group A.1", "Group A.2", "Group B.1", "Group B.2",
+               "Group A.1", "Group A.2", "Group B.1", "Group B.2")
+
+placeholder_row <- tibble(term = "IVs used",
+                          !!!setNames(as.list(iv_labels), model_names))
 
 # Combine: coefficients, then placeholder, then diagnostics
 final_table <- bind_rows(coef_wide, placeholder_row, diag_rows)
@@ -2662,7 +2660,8 @@ n_coef_rows <- nrow(coef_wide)
 # ---- Export as LaTeX ----
 latex_table <- kable(final_table, format = "latex", booktabs = TRUE, escape = FALSE,
                      align = c("l", rep("c", length(model_names))),
-                     col.names = c("", model_names)) %>%
+                     col.names = c("", model_names),
+                     caption = "Arellano-Bond and System GMM estimation results for ridership and crime") %>%
   kable_styling(latex_options = c("scale_down", "hold_position"),
                 font_size = 10) %>%
   add_header_above(c(" " = 1,

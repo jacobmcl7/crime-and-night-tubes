@@ -1,28 +1,28 @@
 \begin{table}[!h]
-\centering\begingroup\fontsize{10}{12}\selectfont
-
+\centering
+\caption{Arellano-Bond and System GMM estimation results for ridership and crime}
+\centering
 \resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
-\begin{tabular}{lcccccccc}
+\fontsize{10}{12}\selectfont
+\begin{tabular}[t]{lcccccccc}
 \toprule
 \multicolumn{1}{c}{ } & \multicolumn{4}{c}{Arellano-Bond} & \multicolumn{4}{c}{System GMM} \\
 \cmidrule(l{3pt}r{3pt}){2-5} \cmidrule(l{3pt}r{3pt}){6-9}
- & AB Log 2:3 & AB Log 3:4 & AB Imp 2:3 & AB Imp 3:4 & Sys Log 2:3 & Sys Log 3:4 & Sys Imp 2:3 & Sys Imp 3:4\\
+ & AB Log 1,2 & AB Log 2,2 & AB Imp 1,2 & AB Imp 2,2 & Sys Log 1,2 & Sys Log 2,2 & Sys Imp 1,2 & Sys Imp 2,2\\
 \midrule
-Ridership$_{t-1}$ & \makecell{-0.1651*** \\ (0.0273)} & \makecell{-0.1982*** \\ (0.0404)} & \makecell{-0.1712*** \\ (0.0225)} & \makecell{-0.1930*** \\ (0.0306)} & \makecell{0.6789*** \\ (0.0435)} & \makecell{0.8909*** \\ (0.1253)} & \makecell{0.7412*** \\ (0.0526)} & \makecell{0.8226*** \\ (0.1443)}\\
-Crime (log)$_{t-1}$ & \makecell{-155.7737*** \\ (22.6138)} & \makecell{-288.0347*** \\ (48.3539)} &  &  & \makecell{-50.9379 \\ (31.4680)} & \makecell{-18.0538 \\ (42.9313)} &  & \\
-Crime (log)$_{t-2}$ & \makecell{-33.3179* \\ (19.7059)} & \makecell{-14.8150 \\ (28.5308)} &  &  & \makecell{-65.4487* \\ (37.5934)} & \makecell{21.8024 \\ (61.2850)} &  & \\
-Ridership$_{t-2}$ &  & \makecell{-0.7428*** \\ (0.0448)} &  & \makecell{-0.6696*** \\ (0.0225)} &  & \makecell{-0.5751 \\ (0.5600)} &  & \makecell{-0.2295 \\ (0.8726)}\\
-Crime (imputed)$_{t-1}$ &  &  & \makecell{-45.4250*** \\ (6.6870)} & \makecell{-67.3048*** \\ (7.8000)} &  &  & \makecell{-41.3900** \\ (20.9524)} & \makecell{-32.6005 \\ (35.8780)}\\
+$taps_{s,t-1}$ & \makecell{-0.1651*** \\ (0.0273)} & \makecell{-0.1982*** \\ (0.0404)} & \makecell{-0.1712*** \\ (0.0225)} & \makecell{-0.1930*** \\ (0.0306)} & \makecell{0.6789*** \\ (0.0435)} & \makecell{0.8909*** \\ (0.1253)} & \makecell{0.7412*** \\ (0.0526)} & \makecell{0.8226*** \\ (0.1443)}\\
+$\hat{\tau}_{s,t-1}$ (in logs) & \makecell{-155.7737*** \\ (22.6138)} & \makecell{-288.0347*** \\ (48.3539)} &  &  & \makecell{-50.9379 \\ (31.4680)} & \makecell{-18.0538 \\ (42.9313)} &  & \\
+$\hat{\tau}_{s,t-2}$ (in logs) & \makecell{-33.3179* \\ (19.7059)} & \makecell{-14.8150 \\ (28.5308)} &  &  & \makecell{-65.4487* \\ (37.5934)} & \makecell{21.8024 \\ (61.2850)} &  & \\
+$taps_{s,t-2}$ &  & \makecell{-0.7428*** \\ (0.0448)} &  & \makecell{-0.6696*** \\ (0.0225)} &  & \makecell{-0.5751 \\ (0.5600)} &  & \makecell{-0.2295 \\ (0.8726)}\\
+$\hat{\tau}_{s,t-1}$ (in imp. levels) &  &  & \makecell{-45.4250*** \\ (6.6870)} & \makecell{-67.3048*** \\ (7.8000)} &  &  & \makecell{-41.3900** \\ (20.9524)} & \makecell{-32.6005 \\ (35.8780)}\\
 \addlinespace
-Crime (imputed)$_{t-2}$ &  &  & \makecell{-18.4490*** \\ (6.4911)} & \makecell{-19.5903** \\ (9.1297)} &  &  & \makecell{-74.0748** \\ (30.5870)} & \makecell{-44.0377 \\ (44.7547)}\\
+$\hat{\tau}_{s,t-2}$ (in imp. levels) &  &  & \makecell{-18.4490*** \\ (6.4911)} & \makecell{-19.5903** \\ (9.1297)} &  &  & \makecell{-74.0748** \\ (30.5870)} & \makecell{-44.0377 \\ (44.7547)}\\
 \midrule
-Your text here &  &  &  &  &  &  &  & \\
-Sargan test (p) & 0.0004 & 0.0006 & 0.0000 & 0.0001 & 0.0002 & 0.0008 & 0.0003 & 0.0003\\
+IVs used & Group A.1 & Group A.2 & Group B.1 & Group B.2 & Group A.1 & Group A.2 & Group B.1 & Group B.2\\
 AR(1) test (p) & 0.0254 & 0.0119 & 0.0628 & 0.0552 & 0.0146 & 0.1100 & 0.0165 & 0.2657\\
 AR(2) test (p) & 0.0003 & 0.2105 & 0.0002 & 0.1150 & 0.4578 & 0.3673 & 0.4063 & 0.8146\\
 \bottomrule
 \multicolumn{9}{l}{\rule{0pt}{1em}\textit{Note: }}\\
 \multicolumn{9}{l}{\rule{0pt}{1em}Robust standard errors in parentheses. * p$<$0.1, ** p$<$0.05, *** p$<$0.01}\\
 \end{tabular}}
-\endgroup{}
 \end{table}
