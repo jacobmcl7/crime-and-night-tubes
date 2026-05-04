@@ -44,6 +44,7 @@
 #   13c) same as 13) but for total crime count (log-residuals)
 #   13d) spatial block bootstrap of the kernel regression for T&R, by LSOA
 #   13e) same as 13) but with controls in the first-stage regression
+#   13f) same as 13) but for more than 1km
 # 14) BJS (2024) for the difference in evolution in rich vs poor areas (all crimes)
 #   14a) same but for each crime type, plotted in a grid
 # 15) ridership data and station-level imputed crime effect: Anderson-Hsiao IV regressions
@@ -273,6 +274,8 @@ final_data <- define_distance_bands(thresholds = c(0, 0.25, 0.5, 0.75, 1), dista
 final_data <- define_treatment_event_time(distance = 0.5, data = final_data)
 final_data <- define_treatment_event_time(distance = 0.75, data = final_data)
 final_data <- define_treatment_event_time(distance = 1.25, data = final_data)
+final_data <- define_treatment_event_time(distance = 1.5, data = final_data)
+
 
 # now do the exact same for the house price data
 # house_data <- define_treatment_event_time(distance = 1, data = house_data)
@@ -2059,6 +2062,105 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_controls.png", width = 8, height = 6)
 
 
+####################################################################
+
+# 13f) now do 13) again but at longer horizons, to allow for possible spillovers
+
+# first 1.25km
+
+# get the data ready
+final_data <- final_data %>%
+  mutate(log_theft_robbery = log(theft_from_the_person + robbery + 1)) # add 1 to avoid log(0)
+
+# collect not (yet) treated units
+first_stage_data <- final_data %>%
+  filter(event_time_1.25 < 0) %>%
+  select(location, Month, log_theft_robbery)
+
+# do the regression
+TWFE_125km_theft_robbery <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_125km_theft_robbery, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_theft_robbery - fitted_vals)
+
+# now run the kernel regression
+
+# plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units within 1.25km
+second_stage_data <- final_data %>%
+  filter(event_time_1.25 >= 0)
+
+# TEMPORARY - because of really messy coding, I create my min_active_dist variable during the define_distance_bands function
+# define a function that gives the minimum distance from an active night-tube station for everyone
+second_stage_data <- second_stage_data %>%
+  mutate(min_active_dist_all = pmin(min_nt_central_dist, min_nt_victoria_dist, min_nt_jubilee_dist, min_nt_northern_dist, min_nt_piccadilly_dist, na.rm = TRUE))
+
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist_all,
+                                 y = second_stage_data$residuals,
+                                 bandwidth = dpill(second_stage_data$min_active_dist_all, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_bw()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_125km_kernel_theft_robbery.png", width = 8, height = 6)
+
+
+# now 1.5km, exactly as above
+
+# collect not (yet) treated units
+first_stage_data <- final_data %>%
+  filter(event_time_1.5 < 0) %>%
+  select(location, Month, log_theft_robbery)
+
+# do the regression
+TWFE_15km_theft_robbery <- feols(log_theft_robbery ~ 1 | location + Month, data = first_stage_data)
+
+# get fitted values and residuals for the whole data
+final_data$fitted_vals <- predict(TWFE_15km_theft_robbery, newdata = final_data)
+final_data <- final_data %>%
+  mutate(residuals = log_theft_robbery - fitted_vals)
+
+# now run the kernel regression
+
+# plot a kernel regression estimate of the relationship between residuals and distance, for all post-treatment units within 1.5km
+second_stage_data <- final_data %>%
+  filter(event_time_1.5 >= 0)
+
+# TEMPORARY - because of really messy coding, I create my min_active_dist variable during the define_distance_bands function
+# define a function that gives the minimum distance from an active night-tube station for everyone
+second_stage_data <- second_stage_data %>%
+  mutate(min_active_dist_all = pmin(min_nt_central_dist, min_nt_victoria_dist, min_nt_jubilee_dist, min_nt_northern_dist, min_nt_piccadilly_dist, na.rm = TRUE))
+
+# do the kernel regression and save the results
+model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist_all,
+                                 y = second_stage_data$residuals,
+                                 bandwidth = dpill(second_stage_data$min_active_dist_all, second_stage_data$residuals),  # pilot bandwidth
+                                 degree = 1,  # i.e. local linear
+                                 gridsize = 100))
+
+# plot the results
+ggplot(model_kerns_all, aes(x = x, y = y)) +
+  geom_line(color = "blue", size = 1.5) +
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (T&R)",
+       x = "Distance from Station (km)",
+       y = "Treatment Effect") +
+  theme_bw()
+
+# save the graph
+ggsave("Crime and night tubes/Output/Figures/TWFE_15km_kernel_theft_robbery.png", width = 8, height = 6)
 
 
 
