@@ -3,15 +3,18 @@ to do list:
 next things to do:
 
  - final bits for submission
-    - do Conley TWFE/A+S for extra robustness (with various kernels) (decide whether to)
-    - get the number of pre-treatment coeffs right for BJS!
-    - redo controls estimation with BJS/A+S
-    - do the bias-variance tradeoff analysis
-    - check we have fit with marking criteria
-    - mention magnitude of local effects?
-    - cut words
+    - get the number of pre-treatment coeffs right for BJS! Rerun with the right k (1)
+    - redo controls estimation with BJS/A+S (3)
+    - do the bias-variance tradeoff analysis (2)
     - make graphs and tables nicer - formatting, titles, captions, descriptions
-    - check through estimator theory
+    - check we have fit with marking criteria
+    - cut words
+
+
+ - things to do if more time
+    - talk about magnitude of local effects
+    - do Conley TWFE/A+S for extra robustness (with various kernels)
+    - check through estimator theory more, incorporate Robinson results in more detail
 
 
  - do extra parts of the analysis
