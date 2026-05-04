@@ -856,8 +856,10 @@ treatment_colors <- c(
   "Outside 1km from NT"  = "#000000"
 )
 
+# plot within the same figure, using patchwork
+
 # first plot theft_robbery means
-ggplot(mean_data,
+p1 <- ggplot(mean_data,
        aes(x = period,
            y = mean_theft_robbery,
            color = as.factor(within_1km),
@@ -870,18 +872,20 @@ ggplot(mean_data,
     breaks = c("Within 1km of NT", "Outside 1km from NT")
   ) +
   labs(
-    title    = "Mean Thefts & Robberies Over Time",
-    x        = "Month",
-    y        = "Mean thefts & robberies",
-    color    = "First treatment period"
+    title = "Robberies + Thefts from the Person",
+    x     = "Months since Jan-2015",
+    y     = "Mean thefts & robberies",
+    color = "Group"
   ) +
-  theme_bw()
-
-# save it
-ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_unadjusted_2groups.png", width = 8, height = 6)
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text  = element_text(size = 12)
+  )
 
 # now plot total crime count means
-ggplot(mean_data,
+p2 <- ggplot(mean_data,
        aes(x = period,
            y = mean_total_crime,
            color = as.factor(within_1km),
@@ -894,15 +898,31 @@ ggplot(mean_data,
     breaks = c("Within 1km of NT", "Outside 1km from NT")
   ) +
   labs(
-    title    = "Mean Number of Crimes Over Time",
-    x        = "Month",
-    y        = "Mean number of crimes",
-    color    = "First treatment period"
+    title = "Total Crime Count",
+    x     = "Months since Jan-2015",
+    y     = "Mean number of crimes",
+    color = "Group"
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title = element_text(size = 14),
+    axis.text  = element_text(size = 12)
+  )
 
-# save it
-ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time_unadjusted_2groups.png", width = 8, height = 6)
+# combine with a shared legend on the right
+combined <- p2 + p1 +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.position = "right",
+    legend.title = element_text(size = 14),
+    legend.text  = element_text(size = 12)
+  )
+
+combined
+
+ggsave("Crime and night tubes/Output/Figures/combined_means_over_time.png",
+       combined, width = 14, height = 6)
 
 ############################################################
 
@@ -1254,14 +1274,17 @@ ggplot(night_tube_usage, aes(x = weeks_since_opening, y = `Journeys/ Weekend`)) 
   geom_vline(xintercept = 7, linetype = "dashed", linewidth = 0.5, color = "#A0A5A9") +
   geom_vline(xintercept = 13, linetype = "dashed", linewidth = 0.5, color = "#000000") +
   geom_vline(xintercept = 17, linetype = "dashed", linewidth = 0.5, color = "#003688") +
-  geom_label(x = 0.5, y = 50000, label = "Central, Victoria lines open", color = "#E32017", hjust = 0, size = 3) +
-  geom_label(x = 7.5, y = 70000, label = "Jubilee line opens", color = "#A0A5A9", hjust = 0, size = 3) +
-  geom_label(x = 13.5, y = 90000, label = "Northern line opens", color = "#000000", hjust = 0, size = 3) +
-  geom_label(x = 17.5, y = 110000, label = "Piccadilly line opens", color = "#003688", hjust = 0, size = 3) +
-  labs(title = "Night Tube Usage Over Time",
-       x = "Weeks Since Opening",
+  geom_label(x = 0.5, y = 50000, label = "Central, Victoria lines open", color = "#E32017", hjust = 0, size = 5) +
+  geom_label(x = 7.5, y = 70000, label = "Jubilee line opens", color = "#A0A5A9", hjust = 0, size = 5) +
+  geom_label(x = 13.5, y = 90000, label = "Northern line opens", color = "#000000", hjust = 0, size = 5) +
+  geom_label(x = 17.5, y = 110000, label = "Piccadilly line opens", color = "#003688", hjust = 0, size = 5) +
+  labs(x = "Weeks Since First Opening (August 19, 2016)",
        y = "Number of Journeys per Weekend") +
-  theme_bw()
+  theme_bw() +
+  theme(
+    axis.title = element_text(size = 14),
+    axis.text  = element_text(size = 12)
+  )
 
 # save it
 ggsave("Crime and night tubes/Output/Figures/night_tube_usage_over_time.png", width = 8, height = 6)

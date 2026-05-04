@@ -128,7 +128,7 @@ plot_prepare2 <- function(results, omitted_pd) {
 
 
 # now create a function that plots the graph, using ggplot
-plot <- function(coefs, xsequence, ymax, ymin, title, note = "") {
+plot <- function(coefs, xsequence, ymax, ymin, xlab, ylab, title = "", note = "") {
   ggplot(coefs, aes(x = event_time, y = coef)) +
     geom_line() +
     geom_point() +
@@ -139,10 +139,15 @@ plot <- function(coefs, xsequence, ymax, ymin, title, note = "") {
     scale_x_continuous(breaks = xsequence) +
     ylim(ymin, ymax) +
     labs(title = title,
-          x = "Event Time (Months Since Treatment)",
-          y = "Coefficient on Event Time",
+          x = xlab,
+          y = ylab,
           caption = note) +
-    theme_bw()
+    theme_bw() +
+    theme(
+      plot.title = element_text(size = 16),
+      axis.title = element_text(size = 14),
+      axis.text  = element_text(size = 12)
+    )
 }
 
 
@@ -431,11 +436,12 @@ coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_resu
 
 # plot the results
 plot(coefs = coefs, 
-    xsequence = seq(-10, 15, 5), 
+    xsequence = seq(-20, 15, 5), 
     ymin = -0.05,
     ymax = 0.05,
-    title = "BJS (2024) - All Crimes", 
-    note = "Simple treatment definition, theshold = 1km")
+    xlab = "Event Time (Months Since Treatment)",
+    ylab = "Event Time-Specific Coefficient Estimate",
+    note = "Estimated using Borusyak et al (2024); SEs clustered at the MSOA level")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_all_crimes.png", width = 8, height = 6)
@@ -1013,8 +1019,9 @@ plot(coefs = coefs,
     xsequence = seq(-20, 15, 5),
     ymin = -0.1,
     ymax = 0.1,
-    title = "BJS (2024) - Theft and Robbery", 
-    note = "Simple treatment definition, theshold = 1km")
+    xlab = "Event Time (Months Since Treatment)",
+    ylab = "Event Time-Specific Coefficient Estimate",
+    note = "Estimated using Borusyak et al (2024); SEs clustered at the MSOA level")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_theft_and_robbery.png", width = 8, height = 6)
@@ -1037,21 +1044,29 @@ p1 <- plot(coefs = coefs_0_025,
            xsequence = seq(-20, 15, 5),
            ymin = -0.05,
            ymax = 0.15,
+           xlab = "Event Time",
+           ylab = "Coefficient Estimate",
            title = "0 to 0.25km")
 p2 <- plot(coefs = coefs_025_05, 
            xsequence = seq(-20, 15, 5),
            ymin = -0.05,
            ymax = 0.15,
+           xlab = "Event Time",
+           ylab = "Coefficient Estimate",
            title = "0.25 to 0.5km")
 p3 <- plot(coefs = coefs_05_075, 
            xsequence = seq(-20, 15, 5),
            ymin = -0.05,
            ymax = 0.15,
+           xlab = "Event Time",
+           ylab = "Coefficient Estimate",
            title = "0.5 to 0.75km")
 p4 <- plot(coefs = coefs_075_1, 
            xsequence = seq(-20, 15, 5),
            ymin = -0.05,
            ymax = 0.15,
+           xlab = "Event Time",
+           ylab = "Coefficient Estimate",
            title = "0.75 to 1km")
 
 # now combine them into a grid
@@ -1119,12 +1134,16 @@ ggplot(coefs_all, aes(x = event_time)) +
   scale_colour_manual(name = "Distance Band", values = band_colours) +
   scale_fill_manual(name = "Distance Band", values = band_colours) +
   labs(
-    title   = "BJS (2024) results for theft and robbery, disaggregated by distance",
-    caption = "Basic treatment definition, threshold = 1km",
+    caption = "Estimated using Borusyak et al (2024); SEs clustered at the MSOA level",
     x = "Event Time",
-    y = "Coefficient"
+    y = "Coefficient Estimate"
   ) +
-  theme_bw()
+  theme_bw() +
+  theme(
+    plot.title = element_text(size = 16),
+    axis.title.x = element_text(size = 12),
+    axis.title.y = element_text(size = 12)
+  )
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_combined.png", width = 8, height = 6)
@@ -1394,11 +1413,12 @@ for (crime in crime_types_bjs) {
 
   # plot the results
   assign(paste0("plot_", crime), plot(coefs = coefs, 
-      xsequence = seq(-10, 15, 5), 
+      xsequence = seq(-20, 15, 5), 
       ymin = -0.05,
       ymax = 0.05,
-      title = paste0("BJS (2024) - ", gsub("_", " ", crime)), 
-      note = "Simple treatment definition, theshold = 1km"))
+      xlab = "Event Time",
+      ylab = "Coefficient Estimate",
+      title = tools::toTitleCase(gsub("_", " ", crime))))
   
   # print a message to indicate completion
   print(paste0("Done for ", crime))
@@ -1410,7 +1430,10 @@ for (crime in crime_types_bjs) {
  plot_antisocial_behaviour + plot_shoplifting + plot_criminal_damage_and_arson + plot_other_crime +
  plot_possession_of_weapons + plot_bicycle_theft + plot_drugs + plot_public_order +
  plot_theft_from_the_person + plot_robbery) +
-  plot_layout(ncol = 5)
+  plot_layout(ncol = 5) +
+  plot_annotation(
+    caption = "Each set of coefficients estimated using Borusyak et al (2024); SEs clustered at the MSOA level"
+  )
 
 # save this too
 ggsave("Crime and night tubes/Output/Results/BJS_1km_crimes_grid.png", width = 22, height = 12)
