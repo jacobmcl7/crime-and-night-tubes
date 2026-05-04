@@ -4,8 +4,7 @@ next things to do:
 
  - final bits for submission
     - get the number of pre-treatment coeffs right for BJS! Rerun with the right k (1)
-    - redo controls estimation with BJS/A+S (3)
-    - do the bias-variance tradeoff analysis (2)
+    - redo controls estimation with BJS/A+S (2)
     - make graphs and tables nicer - formatting, titles, captions, descriptions
     - check we have fit with marking criteria
     - cut words
