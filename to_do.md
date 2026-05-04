@@ -7,13 +7,12 @@ next things to do:
     - redo controls estimation with BJS/A+S
     - do the bias-variance tradeoff analysis
     - finish final table formatting
-    - finish estimator theory
-    - do the writeup for the estimator results
     - check we have fit with marking criteria
     - mention magnitude of local effects?
     - cut words
     - make graphs and tables nicer - formatting, titles, captions, descriptions
-    - do bibliography
+    - check through estimator theory
+
 
  - do extra parts of the analysis
     - do T+R result with different groups of controls for robustness
