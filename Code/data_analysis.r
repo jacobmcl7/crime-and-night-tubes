@@ -8,12 +8,16 @@
 # 1) TWFE, 1km treatment, on total crime count (log(+1))
 #   1a) varied distances
 # 2) A+S (2021), 1km treatment, on total crime count
-#  2a) varied distances
+#   2a) varied distances
 # 3) BJS (2024), 1km treatment, on total crime count
 # 4) TWFE with controls
+#   4a) varied distances
+#   4b) for theft from the person
+#   4c) for robbery
 # 5) TWFE disaggregated by distance bands
 # 6) TWFE disaggregated by wealth of area
 # 7) TWFE disaggregated by proximity to a red line station
+#   7a) same but for robberies
 # 8) TWFE for individual crime types - theft from the person
 #   8a) A+S for theft
 #   8b) TWFE disaggregation by distance bands
@@ -22,20 +26,37 @@
 #   9a) A+S for robbery
 #   9b) TWFE disaggregation by distance bands
 #   9c) BJS (2024) for robbery
-# 10) TWFE for all crime types, plotted together
-#   10a) same but with A+S
-#   10b) same but with BJS
-# 11) Poisson ETWFE regression for the main effect
-#   11a) same but for theft from the person
-#   11b) same but for robbery
-# 12) non-parametric estimation of distance-decay of ATT
-#   12a) same but split by six month periods
-#   12b) same but split by three month periods
-#   12c) now do it with the residuals from a Poisson regression
-# 13) BJS (2024) for the difference in evolution in rich vs poor areas
-#   13a) same but for all crime types, plotted together
+# 10) TWFE for sum of thefts and robberies
+#   10a) BJS for sum of thefts and robberies
+#   10b) BJS disaggregated by distance for thefts and robberies, plus combined-axes plot
+#   10c) thefts and robberies with controls (BJS, then TWFE with three control sets)
+#   10d) BJS by distance for thefts and robberies, with controls
+# 11) TWFE for all crime types, plotted together
+#   11a) same but with A+S
+#   11b) same but with BJS
+#   11c) TWFE for all crimes with controls (constructed+IMD, all controls, constructed only)
+# 12) Poisson ETWFE regression for the main effect
+#   12a) same but for theft from the person
+#   12b) same but for robbery
+# 13) non-parametric estimation of distance-decay of ATT (T&R, log-residuals)
+#   13a) same but split by six month periods
+#   13b) same but split by three month periods
+#   13c) same as 13) but for total crime count (log-residuals)
+#   13d) spatial block bootstrap of the kernel regression for T&R, by LSOA
+#   13e) same as 13) but with controls in the first-stage regression
+# 14) BJS (2024) for the difference in evolution in rich vs poor areas (all crimes)
+#   14a) same but for each crime type, plotted in a grid
+# 15) ridership data and station-level imputed crime effect: Anderson-Hsiao IV regressions
+#     (log TEs and imputed TEs), exported as LaTeX tables
+#   15a) robustness with Arellano-Bond and Blundell-Bond (system GMM),
+#        log TEs and imputed TEs, exported as a LaTeX table
+# 16) summary statistics: pre-treatment mean crime counts (robbery, theft from the person),
+#     rough ATT magnitudes, and count of treated locations
 
 
+# all analysis reported in the paper and in the appendix is found here (as well as the 
+# descriptive analysis in data_visualisation.r). This script also contains some analysis
+# that is not reported in the paper, mostly due to lack of available words.
 
 
 ########################################################
@@ -943,7 +964,17 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_robbery.png", width = 8, he
 
 ####################################################################
 
-# 9d) now do TWFE for the sum of thefts and robberies
+
+
+
+
+
+
+
+
+
+
+# 10) now do TWFE for the sum of thefts and robberies
 
 # create the variable for the sum of thefts and robberies
 final_data <- final_data %>%
@@ -969,7 +1000,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery.png", wi
 
 #####################################################################
 
-# 9e) now do BJS for the sum of thefts and robberies
+# 10a) now do BJS for the sum of thefts and robberies
 
 # load in the results from csv
 coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_theft_and_robbery.csv", "tau")
@@ -988,7 +1019,8 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_theft_and_robbery.png", wid
 
 #####################################################################
 
-# 9f) now do it disaggregated by distance for the sum of thefts and robberies, with BJS
+# 10b) now do BJS for the sum of thefts and robberies again, but disaggregated by distance
+# also visualise the plots all on the same axes
 
 # load in the results from csv
 coefs_0_025 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_1.csv", "tau_W")
@@ -1097,7 +1129,7 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_co
 
 ###################################################################
 
-# 9g) now do it for thefts and robberies with controls
+# 10c) now do it for thefts and robberies with controls
 
 # first with BJS
 
@@ -1166,7 +1198,7 @@ plot(coefs = coefs_constructed,
 
 ########################################################################
 
-# 9h) now do it with BJS by distance with controls
+# 10d) now do it with BJS by distance with controls
 
 # load in the results from csv
 coefs_0_025 <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_distance_band_1_controls.csv", "tau_W")
@@ -1256,7 +1288,7 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_disagg_theft_and_robbery_co
 
 ####################################################################
 
-# 10) now do the TWFE regression from 1) for all crimes separately, then plot them all together
+# 11) now do the TWFE regression from 1) for all crimes separately, then plot them all together
 
 crime_types <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
  "anti-social_behaviour", "shoplifting", "criminal_damage_and_arson", "other_crime",                 
@@ -1302,7 +1334,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_crimes_grid.png", width = 
 
 ####################################################################
 
-# 10a) do this with A+S too instead of TWFE
+# 11a) do this with A+S too instead of TWFE
 
 for (crime in crime_types) {
   
@@ -1346,7 +1378,7 @@ ggsave("Crime and night tubes/Output/Results/Sunab_1km_crimes_grid.png", width =
 
 ####################################################################
 
-# 10b) do it with BJS (2024)
+# 11b) do it with BJS (2024)
 
 # edit crime_types to get the name for antisocial behaviour right for the csv
 crime_types_bjs <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
@@ -1383,7 +1415,8 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_crimes_grid.png", width = 2
 
 ####################################################################
 
-# 10d) now do it with controls for all crimes with TWFE
+# 11d) now do it with controls for all crimes with TWFE
+# do it for three different sets of controls
 
 # first with constructed controls as well as IMD
 
@@ -1537,7 +1570,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_theft_and_robbery_controls
 
 ####################################################################
 
-# 11) estimate the effect with a Poisson regression
+# 12) estimate the effect with a Poisson regression
 
 # to do this, we use the etwfe package (from Wooldridge, 2023)
 
@@ -1576,7 +1609,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson.png", width = 8, h
 
 ####################################################################
 
-# 11a) do it for thefts specifically
+# 12a) do it for thefts specifically
 
 # do the regression, saving it to then be plotted
 TWFE_1km_poisson_theft <- etwfe(
@@ -1611,7 +1644,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_theft.png", width 
 
 ####################################################################
 
-# 11b) do it for robberies too
+# 12b) do it for robberies specifically
 
 # do the regression, saving it to then be plotted
 TWFE_1km_poisson_robbery <- etwfe(
@@ -1652,7 +1685,7 @@ ggsave("Crime and night tubes/Output/Results/TWFE_1km_poisson_robbery.png", widt
 
 ####################################################################
 
-# 12) estimate the treatment effect decay with distance non-parametrically for thefts and robberies
+# 13) estimate the treatment effect decay with distance non-parametrically for thefts and robberies
 
 # first collect the residuals from a basic regression on fixed effects, without event time dummies, on the not-yet-treated untreated units
 # this is just first stage of BJS (2024)
@@ -1735,7 +1768,7 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery.png",
 
 ####################################################################
 
-# 12a) now do the kernel regression by event time periods, first in six month periods
+# 13a) now do the kernel regression by event time periods, first in six month periods
 
 # now loop over six month periods from 0-5 to 12-17, doing a kernel regression for each and saving the predictions
 for (t in seq(0, 15, by = 6)) {
@@ -1775,7 +1808,7 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_6_months.png", widt
 
 ####################################################################
 
-# 12b) now the same, but at three month periods
+# 13b) now the same, but at three month periods
 
 # now do the same thing but in three month periods
 for (t in seq(0, 15, by = 3)) {
@@ -1821,92 +1854,9 @@ ggplot() +
 # save the graph
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_3_months.png", width = 8, height = 6)
 
-
-#####################################################################
-
-# 12c) now do it with the residuals from a Poisson regression
-
-# get the outcome variable ready
-final_data <- final_data %>%
-  mutate(theft_robbery = theft_from_the_person + robbery)
-
-# subset the data to untreated and not-yet-treated units
-first_stage_data <- final_data %>%
-  filter(event_time_1 < 0) %>%
-  select(location, Month, theft_robbery)
-
-# do the Poisson regression
-first_stage_Poisson <- feglm(theft_robbery ~ 1 | location + Month, data = first_stage_data, family = poisson)
-
-# subset the data to include only post-treatment observations
-second_stage_data <- final_data %>%
-  filter(event_time_1 >= 0)
-
-# get the residuals
-second_stage_data <- second_stage_data %>%
-  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = second_stage_data)) %>%
-  mutate(residuals_poisson = theft_robbery - fitted_poisson)
-
-# some are NA - why?? Because they didn't have a theft/robbery beforehand?
-# drop these
-second_stage_data <- second_stage_data %>%
-  filter(!is.na(residuals_poisson))
-
-# do the kernel regression and save the results
-model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
-                                 y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
-                                 gridsize = 100))
-
-# plot the results
-ggplot(model_kerns_all, aes(x = x, y = y)) +
-  geom_line(color = "blue", size = 1.5) +
-  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
-       x = "Distance from Station (km)",
-       y = "Treatment Effect") +
-  theme_bw()
-
-# save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_theft_robbery_poisson.png", width = 8, height = 6)
-
-
-
-# # now fit a GAM using bam()
-# model_gam <- bam(residuals_poisson ~ s(min_active_dist, k = 20),
-#                  data = second_stage_data,
-#                  discrete = TRUE,  # major speed boost for large N
-#                  nthreads = 4)     # parallel processing
-
-# # Create prediction grid with SEs
-# pred_grid <- data.frame(min_active_dist = seq(min(second_stage_data$min_active_dist),
-#                                                max(second_stage_data$min_active_dist),
-#                                                length.out = 100))
-
-# preds <- predict(model_gam, newdata = pred_grid, se.fit = TRUE)
-# pred_grid$y <- preds$fit
-# pred_grid$se <- preds$se.fit
-# pred_grid$lower <- pred_grid$y - 1.96 * pred_grid$se
-# pred_grid$upper <- pred_grid$y + 1.96 * pred_grid$se
-
-# # Plot
-# ggplot(pred_grid, aes(x = min_active_dist, y = y)) +
-#   geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.3, color = "black", fill = "blue") +
-#   geom_line(color = "blue") +
-#   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-#   labs(title = "Treatment Effect Decay with Distance (T&R, Poisson residuals)",
-#        x = "Distance from Station (km)",
-#        y = "Treatment Effect") +
-#   theme_bw()
-
-# # save the graph
-# ggsave("Crime and night tubes/Output/Figures/TWFE_1km_gam_theft_robbery_poisson.png", width = 8, height = 6)
-
-
 ####################################################################
 
-# 12d) now do it with residuals from the total crime count
+# 13c) now do it with residuals from the total crime count
 
 first_stage_data <- final_data %>%
   filter(event_time_1 < 0) %>%
@@ -1946,55 +1896,10 @@ ggplot(model_kerns_all, aes(x = x, y = y)) +
 ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total.png", width = 8, height = 6)
 
 
-####################################################################
-
-# 12e) now do it with the residuals from a Poisson regression on total crime counts
-
-# subset the data to untreated and not-yet-treated units
-first_stage_data <- final_data %>%
-  filter(event_time_1 < 0) %>%
-  select(location, Month, num_crimes)
-
-# do the Poisson regression
-first_stage_Poisson <- feglm(num_crimes ~ 1 | location + Month, data = first_stage_data, family = poisson)
-
-# subset the data to include only post-treatment observations
-second_stage_data <- final_data %>%
-  filter(event_time_1 >= 0)
-
-# get the residuals
-second_stage_data <- second_stage_data %>%
-  mutate(fitted_poisson = predict(first_stage_Poisson, newdata = second_stage_data)) %>%
-  mutate(residuals_poisson = num_crimes - fitted_poisson)
-
-# some are NA - why?? Because they didn't have a theft/robbery beforehand?
-# drop these
-second_stage_data <- second_stage_data %>%
-  filter(!is.na(residuals_poisson))
-
-# do the kernel regression and save the results
-model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
-                                 y = second_stage_data$residuals_poisson,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals_poisson),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
-                                 gridsize = 100))
-
-# plot the results
-ggplot(model_kerns_all, aes(x = x, y = y)) +
-  geom_line(color = "blue", size = 1.5) +
-  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (all crimes, Poisson residuals)",
-       x = "Distance from Station (km)",
-       y = "Treatment Effect") +
-  theme_bw()
-
-# save the graph
-ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_total_poisson.png", width = 8, height = 6)
-
 
 ####################################################################
 
-# 12f) spatial block boostrap the kernel regression for T&R count, by LSOA, to get confidence intervals
+# 13d) spatial block boostrap the kernel regression for T&R count, by LSOA, to get confidence intervals
 
 # NOTE: NEED TO DETERMINE WHETHER THIS IS VALID
 
@@ -2107,7 +2012,7 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_theft_robbery_boots
 
 ####################################################################
 
-# 12g) now do it as at the start, but with controls
+# 13e) now do it as in 13), but with controls
 
 # get the data ready
 final_data <- final_data %>%
@@ -2157,9 +2062,14 @@ ggsave("Crime and night tubes/Output/Figures/TWFE_1km_kernel_controls.png", widt
 
 
 
+
+
+
+
+
 ####################################################################
 
-# 13) now use BJS (2024) to do a comparison of the ATT across rich vs poor areas - first for all crimes 
+# 14) now use BJS (2024) to do a comparison of the ATT across rich vs poor areas - first for all crimes 
 
 # load in the data
 coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_results_wealth_all.csv", "tau_W")
@@ -2177,7 +2087,7 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_all.png", width
 
 ####################################################################
 
-# 13a) now for each crime individually, in a loop
+# 14a) now for each crime individually, in a loop
 
 # define the crime types
 crime_types_bjs <- c("violence_and_sexual_offences", "vehicle_crime", "other_theft", "burglary",                    
@@ -2226,7 +2136,7 @@ ggsave("Crime and night tubes/Output/Results/BJS_1km_wealth_diff_grid.png", widt
 
 
 
-# 14) now examine the ridership data and the aggregated station-level imputed crime effect
+# 15) now examine the ridership data and the aggregated station-level imputed crime effect
 
 # load in the ridership data
 ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
@@ -2388,7 +2298,7 @@ etable(
 
 
 
-# 14a) now do robustness with Arellano-Bond and Blundell-Bond
+# 15a) now do the same thing with Arellano-Bond and Blundell-Bond, for robustness
 
 # load in the ridership data
 ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
@@ -2687,7 +2597,7 @@ writeLines(as.character(latex_table), "Crime and night tubes/Output/Results/gmm_
 
 
 
-# 15) now get some quick statistics to inform analysis (here until a better place is found)
+# 16) now get some quick statistics to inform analysis (here until a better place is found)
 
 # firstly, to inform about the magnitude of the treatment effect, get the mean number of pre-treatment crimes in each location (for the ever-treated locations)
 

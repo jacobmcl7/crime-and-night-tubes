@@ -4,6 +4,7 @@ next things to do:
 
  - final bits for submission
     - do Conley TWFE/A+S for extra robustness (with various kernels) (decide whether to)
+    - get the number of pre-treatment coeffs right for BJS!
     - redo controls estimation with BJS/A+S
     - do the bias-variance tradeoff analysis
     - check we have fit with marking criteria
