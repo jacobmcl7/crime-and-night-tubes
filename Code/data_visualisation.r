@@ -17,6 +17,41 @@ load("Crime and night tubes EXTRA DATA/final_data.RData")
 
 
 ########################################################
+# outline
+########################################################
+
+# this file does the data visualisation and descriptive statistics for the paper
+# the sequence of analysis is as follows:
+
+# 1) plot mean log number of crimes over time, by first treatment period (rescaled to common pre-period mean)
+#   1a) same but with periods grouped into three-month bins
+#   1b) same as 1) but for theft from the person
+#   1c) same as 1) but restricting the control group to locations within 1km of any station
+#       (for total crimes and for theft from the person)
+#   1d) same as 1) but restricting the control group to locations within 2km of a night tube station
+#       (for total crimes and for theft from the person)
+# 2) plot the evolution of the mean count of thefts and robberies, rescaled to common pre-period mean
+#   2a) same as 2) but without rescaling
+#   2b) same as 2) but for the total crime count, with rescaling
+#   2c) same as 2) but for the total crime count, without rescaling
+#   2d) same as 2) but with the control group split into three sub-groups
+#       (<2km of NT, <1km from non-NT, 1-2km from non-NT)
+#   2e) same as 2) but collapsing into two groups (within 1km of NT vs outside),
+#       for both thefts+robberies and total crime count, without rescaling
+# 3) summary statistics table for crime counts (mean, median, percentiles, max, % nonzero), exported as LaTeX
+#   3a) summary statistics table for distance to nearest station (counts and percentages within 0.5/1/2km), exported as LaTeX
+# 4) binned bar chart of overall crime counts per location-month
+#   4a) same but for thefts and robberies specifically, faceted by crime type
+# 5) collect total thefts and robberies in the six months pre-treatment and the last six months of the sample,
+#    with proportional difference, for ArcGIS visualisation; exported as Excel
+# 6) plot the evolution of weekly night tube journeys over time, with line-opening markers
+# 7) plot the evolution of total and solved thefts/robberies at red stations,
+#    plus solve rate over time for total crimes across the whole sample
+#    (NOTE: dataset needs updating for solved-outcome variables)
+# 8) histogram of average monthly ridership across night tube stations
+
+
+########################################################
 # define some functions
 # NOTE - MOVE THESE ALL TO POST-GEOCODING SCRIPT?
 ########################################################
@@ -197,12 +232,30 @@ final_data <- final_data %>%
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ############################################################
 # now begin the analysis
 ############################################################
 
 
-# first plot means over time for treated and untreated areas, by the 'first treatment' variable
+# 1) first plot means over time for treated and untreated areas, by the 'first treatment' variable
 
 # calculate monthly means of log number of crimes, by first treatment period
 mean_data <- final_data %>%
@@ -236,7 +289,9 @@ ggplot(mean_data, aes(x = period, y = adjusted_mean_log_num_crimes, color = as.f
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time.png", width = 8, height = 6)
 
 
-# now do it after grouping into three month bins
+################################################################
+
+# 1a) now do it after grouping into three month bins
 mean_data_binned <- final_data %>%
   mutate(period_bin = case_when(
     period %in% c(1, 2, 3) ~ 1,
@@ -284,7 +339,7 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_binne
 
 ############################################################
 
-# now do the same for thefts
+# 1b) now do the same as 1), for thefts
 mean_data_theft <- final_data %>%
   group_by(period, first_treatment_1) %>%
   summarise(mean_log_theft_from_the_person = mean(log_theft_from_the_person, na.rm = TRUE)) %>%
@@ -318,7 +373,10 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 ############################################################
 
-# now do the same thing for different control groups - first just locations within 1km of any station
+# 1c) now do the same thing but using locations within 1km of any station as a control group
+# (i.e. refine the control group)
+
+# first do it with the overall crime count
 
 mean_data_near <- final_data %>%
   filter(min_any_dist < 1) %>%
@@ -353,7 +411,9 @@ ggplot(mean_data_near, aes(x = period, y = adjusted_mean_log_num_crimes, color =
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_1km.png", width = 8, height = 6)
 
 
-# same but for thefts
+
+# now do it with thefts specifically
+
 mean_data_near_theft <- final_data %>%
   filter(min_any_dist < 1) %>%
   group_by(period, first_treatment_1) %>%
@@ -388,7 +448,7 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 ############################################################
 
-# now do the same, but using only regions within 2km of a night tube station
+# 1d) now do the same, but instead using only regions within 2km of a night tube station
 
 # keep only those observations where any of min_nt_*_dist < 2
 final_data_nt_near <- final_data %>%
@@ -432,7 +492,8 @@ ggplot(mean_data_nt_near, aes(x = period, y = adjusted_mean_log_num_crimes, colo
 ggsave("Crime and night tubes/Output/Figures/mean_log_num_crimes_over_time_within_2km_nt.png", width = 8, height = 6)
 
 
-# same but for thefts
+# again do the same but for thefts specifically
+
 mean_data_nt_near_theft <- final_data_nt_near %>%
   group_by(period, first_treatment_1) %>%
   summarise(mean_log_theft_from_the_person = mean(log_theft_from_the_person, na.rm = TRUE)) %>%
@@ -471,7 +532,11 @@ ggsave("Crime and night tubes/Output/Figures/mean_log_theft_from_the_person_over
 
 
 
-# now plot the evolution of the mean of the count of thefts and robberies
+
+
+
+
+# 2) plot the evolution of the mean of the count of thefts and robberies
 
 # NOTE: NEED TO REMOVE 'TREATMENT WINDOW' AND CONVERT PERIOD TO MONTHS
 
@@ -532,7 +597,9 @@ ggplot(mean_data_theft_robbery,
 ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time.png", width = 8, height = 6)
 
 
-# now do the same as before, but don't rescale to have the same mean
+##########################################################################
+
+# 2a) now do the same as before, but don't rescale to have the same mean
 
 # first generate the thefts + robberies variable
 final_data <- final_data %>%
@@ -579,8 +646,10 @@ ggplot(mean_data_theft_robbery,
 ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_unadjusted.png", width = 8, height = 6)
 
 
+###########################################################################
 
-# now do it on the total crime count, as above
+# 2b) now do the same as 2) but on the total crime count, not just thefts and robberies
+
 mean_data <- final_data %>%
   group_by(period, first_treatment_1) %>%
   summarise(mean_count = mean(num_crimes, na.rm = TRUE)) %>%
@@ -633,9 +702,10 @@ ggplot(mean_data,
 ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time.png", width = 8, height = 6)
 
 
+##################################################################
 
+# 2c) now do it without adjustment of means, again as above (i.e. do 2a) for the total crime count, not just thefts and robberies)
 
-# now do it without adjustment of means, again as above
 mean_data <- final_data %>%
   group_by(period, first_treatment_1) %>%
   summarise(mean_count = mean(num_crimes, na.rm = TRUE)) %>%
@@ -676,9 +746,9 @@ ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time_unadjusted.pn
 
 
 
+#########################################################################
 
-
-# now do the same as the first of these plots (mean-adjusted theft and robbery), but split up the control groups
+# 2d) now do the same as 2), but split up the control groups
 
 # temporary - create a minimum distance to night tube variable that goes as far as 2km
 # do this via taking the min of min_nt_*_dist, for all such variables in the data
@@ -766,7 +836,8 @@ ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg
 
 ################################################################
 
-# now just do them for two groups - those within 1km from any Night Tube station, and those outside
+# 2e) now do the same plots for just two groups - those locations within 1km from any Night Tube station, and those outside
+# do this for both the thefts + robberies variable, and the total crime count variable
 
 # first generate the thefts + robberies variable, and an ever-treated variable
 final_data <- final_data %>%
@@ -842,10 +913,7 @@ ggsave("Crime and night tubes/Output/Figures/mean_crimes_over_time_unadjusted_2g
 
 
 
-
-
-
-# now get a summary table for the crime stats
+# 3) now get a summary table of the crime stats
 
 # collect up relevant variables
 crime_types <- c(
@@ -933,7 +1001,7 @@ writeLines(latex_table, "Crime and night tubes/Output/Figures/crimes_summary_sta
 
 ############################################################
 
-# now make a similar table for distance stats
+# 3a) now make a similar table for distance to nearest stationstats
 
 # collect up relevant distance variables
 distance_vars <- c(
@@ -999,7 +1067,17 @@ writeLines(latex_table_distance, "Crime and night tubes/Output/Figures/distance_
 
 ############################################################
 
-# plot a binned bar chart of the crime counts
+
+
+
+
+
+
+
+
+
+
+# 4) plot a binned bar chart of the overall crime counts
 
 # first define the bins
 crime_bins <- final_data %>%
@@ -1028,7 +1106,9 @@ ggplot(crime_bins, aes(x = crime_category, y = pct)) +
 ggsave("Crime and night tubes/Output/Figures/bar_chart_num_crimes.png", width = 8, height = 6)
 
 
-# now do the same for thefts and robberies
+#############################################################
+
+# 4a) now do the same for thefts and robberies specifically
 
 # first preprocess the data into long format in order to calculate the correct counts
 crime_bins_long <- final_data %>%
@@ -1077,7 +1157,19 @@ ggsave("Crime and night tubes/Output/Figures/bar_chart_theft_robbery.png", width
 
 ############################################################
 
-# get the theft and robbery count in the last six months before first treatment, and last six months of the sample
+
+
+
+
+
+
+
+
+
+# 5) collect up the theft and robbery count in the last six months before first treatment, and last six months of the sample
+# this is for visualisation in ArcGIS
+
+# NOTE - THIS WOULD BE IMPROVED BY JUST VISUALISING THE IMPUTED TREATMENT EFFECTS FROM BJS! DO THIS
 
 # do this for the whole of the sample, not just the subset within 2km of a station
 load("Crime and night tubes EXTRA DATA/final_data.RData")
@@ -1121,7 +1213,15 @@ write.xlsx(theft_robbery_summary, "Crime and night tubes EXTRA DATA/theft_robber
 
 ############################################################
 
-# plot the evolution of the weekly number of night-tube journeys
+
+
+
+
+
+
+
+
+# 6) plot the evolution of the weekly number of night-tube journeys
 
 # load the night tube usage data
 night_tube_usage <- read_csv("Crime and night tubes EXTRA DATA/TfL data/NT demand to end 2017.csv")
@@ -1169,7 +1269,20 @@ ggsave("Crime and night tubes/Output/Figures/night_tube_usage_over_time.png", wi
 
 ############################################################
 
-# plot the evolution of mean number of thefts and solved number of thefts at red stations over the sample period
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 7) plot the evolution of mean number of thefts and solved number of thefts at red stations over the sample period
 
 # ISSUE - TO GET UPDATED OUTCOMES WE NEED THE NEWER VERSION OF THE DATASET. IGNORE FOR NOW
 
@@ -1254,7 +1367,8 @@ ggplot(police_response_data, aes(x = period, y = solve_rate)) +
 
 ##############################################################
 
-# now visualise the TfL data
+# 8) now visualise the TfL data as a histogram of average weekly ridership across stations
+
 ridership_data <- read_csv("Crime and night tubes EXTRA DATA/TfL_station_monthly_ridership.csv")
 
 # get a histogram of average weekly ridership across stations
