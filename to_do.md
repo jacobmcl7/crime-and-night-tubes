@@ -3,12 +3,12 @@ to do list:
 next things to do:
 
  - final bits for submission
-    - get the number of pre-treatment coeffs right for BJS! Rerun with the right k (1)
-    - redo controls estimation with BJS/A+S (2)
-    - correct violations of the new plot function in the code
-    - make graphs and tables nicer - formatting, titles, captions, descriptions (3)
-    - check we have fit with marking criteria
     - cut words
+    - get the number of pre-treatment coeffs right for BJS! Rerun with the right k
+    - redo controls estimation with BJS/A+S
+    - correct violations of the new plot function in the code
+    - make graphs and tables nicer - formatting, titles, captions, descriptions
+    - check we have fit with marking criteria
 
 
  - things to do if more time
