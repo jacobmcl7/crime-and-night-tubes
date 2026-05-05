@@ -1016,12 +1016,12 @@ coefs <- load_bjs_results("Crime and night tubes EXTRA DATA/BJS results/BJS_resu
 
 # plot the results
 plot(coefs = coefs, 
-    xsequence = seq(-20, 15, 5),
-    ymin = -0.1,
-    ymax = 0.1,
-    xlab = "Event Time (Months Since Treatment)",
-    ylab = "Event Time-Specific Coefficient Estimate",
-    note = "Estimated using Borusyak et al (2024); SEs clustered at the MSOA level")
+     xsequence = seq(-20, 15, 5),
+     ymin = -0.05,
+     ymax = 0.075,
+     xlab = "Event Time (Months Since Treatment)",
+     ylab = "Event Time-Specific Coefficient Estimate",
+     note = "Estimated using Borusyak et al (2024); SEs clustered at the MSOA level")
 
 # save the graph
 ggsave("Crime and night tubes/Output/Results/BJS_1km_theft_and_robbery.png", width = 8, height = 6)
