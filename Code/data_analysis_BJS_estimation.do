@@ -13,6 +13,13 @@ destring avg_age, replace force
 destring prop_same_eth_group, replace force
 destring single_adult_hh_prop, replace force
 destring avg_health_score, replace force
+destring income_rank, replace force
+destring employment_rank, replace force
+destring education_rank, replace force
+destring health_rank, replace force
+destring crime_rank, replace force
+destring barriers_rank, replace force
+destring living_env_rank, replace force
 
 
 
@@ -47,13 +54,30 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and
 
 *4a) do it with controls
 
+*first with just constructed controls
+
 *do the regression
-did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score) nose
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score)
 
 *save the results
-esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery_controls.csv", cells("b se") plain replace noobs
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery_controls_constructed.csv", cells("b se") plain replace noobs
 
+*now with IMD and the other ranks as well
 
+*do the regression
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd income_rank employment_rank education_rank health_rank crime_rank barriers_rank living_env_rank)
+
+*save the results
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery_controls_IMD.csv", cells("b se") plain replace noobs
+
+*now with all controls
+
+*do the regression
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons pre(20) cluster(msoa21nm) timec(imd income_rank employment_rank education_rank health_rank crime_rank barriers_rank living_env_rank pop_density avg_age prop_same_eth_group single_adult_hh_prop avg_health_score)
+
+*save the results
+esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and_robbery_controls_all.csv", cells("b se") plain replace noobs
+ *Convergence of standard errors is not achieved for coefs - try increasing the tolerance or number of iterations
 
 
 *4) now do it for rich vs poor areas

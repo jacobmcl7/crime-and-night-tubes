@@ -5,7 +5,6 @@ next things to do:
  - final bits for submission
     - get the number of pre-treatment coeffs right for BJS! Rerun with the right k (1)
     - redo controls estimation with BJS/A+S (2)
-    - run BJS results again - 10a, ...
     - correct violations of the new plot function in the code
     - make graphs and tables nicer - formatting, titles, captions, descriptions (3)
     - check we have fit with marking criteria
