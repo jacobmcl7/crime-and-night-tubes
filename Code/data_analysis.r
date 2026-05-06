@@ -1742,9 +1742,13 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
+
+# report bandwidth used
+dpik(second_stage_data$min_active_dist)
+  # 0.0084
 
 # plot the results
 ggplot(model_kerns_all, aes(x = x, y = y)) +
@@ -1806,8 +1810,8 @@ for (t in seq(0, 15, by = 6)) {
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                        y = data_subset$residuals,
-                                       bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                       degree = 1,  # i.e. local linear
+                                       bandwidth = dpik(data_subset$min_active_dist),  # pilot bandwidth
+                                       degree = 0,  # i.e. local constant
                                        gridsize = 100))
    )
 }
@@ -1846,8 +1850,8 @@ for (t in seq(0, 15, by = 3)) {
   # do the kernel regression and save the results
   assign(paste0("model_kerns_", t), as.data.frame(locpoly(x = data_subset$min_active_dist,
                                                            y = data_subset$residuals,
-                                                           bandwidth = dpill(data_subset$min_active_dist, data_subset$residuals),  # pilot bandwidth
-                                                           degree = 1,  # i.e. local linear
+                                                           bandwidth = dpik(data_subset$min_active_dist),  # pilot bandwidth
+                                                           degree = 0,  # i.e. local constant
                                                            gridsize = 100))
   )
 }
@@ -1905,8 +1909,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results
@@ -1975,8 +1979,8 @@ for (n in seq(1, N)) {
     # do the kernel regression and save the results
     model_kerns <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                     y = second_stage_data$residuals,
-                                    bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                    degree = 1,  # i.e. local linear
+                                    bandwidth = dpik(second_stage_data$min_active_dist),  # pilot bandwidth
+                                    degree = 0,  # i.e. local constant
                                     gridsize = 100))
 
     # store the y values as a row in the matrix
@@ -2067,8 +2071,8 @@ second_stage_data <- final_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
 
 # plot the results
@@ -2123,9 +2127,13 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist_all,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist_all, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist_all),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
+
+# report bandwidth used
+dpik(second_stage_data$min_active_dist_all)
+  # 0.0118
 
 # plot the results
 ggplot(model_kerns_all, aes(x = x, y = y)) +
@@ -2169,9 +2177,13 @@ second_stage_data <- second_stage_data %>%
 # do the kernel regression and save the results
 model_kerns_all <- as.data.frame(locpoly(x = second_stage_data$min_active_dist_all,
                                  y = second_stage_data$residuals,
-                                 bandwidth = dpill(second_stage_data$min_active_dist_all, second_stage_data$residuals),  # pilot bandwidth
-                                 degree = 1,  # i.e. local linear
+                                 bandwidth = dpik(second_stage_data$min_active_dist_all),  # pilot bandwidth
+                                 degree = 0,  # i.e. local constant
                                  gridsize = 100))
+
+# report bandwidth used
+dpik(second_stage_data$min_active_dist_all)
+  # 0.0141
 
 # plot the results
 ggplot(model_kerns_all, aes(x = x, y = y)) +
