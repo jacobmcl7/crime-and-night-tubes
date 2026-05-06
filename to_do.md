@@ -11,7 +11,6 @@ next things to do:
     - choose the appropriate k to run BJS regressions with
 
 
-
  - things to do if more time
     - talk about magnitude of local effects
     - do Conley TWFE/A+S for extra robustness (with various kernels)
@@ -19,10 +18,9 @@ next things to do:
 
 
  - do extra parts of the analysis
-    - do T+R result with different groups of controls for robustness
     - do robustness of main result via BJS with other clustering levels
     - make a heatmap for visualisation
-    - make descriptive stats for TfL data (for appendix) (?)
+
 
  - organise analysis and visualisation code better - make it clear what results go where
 
