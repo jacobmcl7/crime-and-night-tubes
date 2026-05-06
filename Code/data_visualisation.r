@@ -588,7 +588,7 @@ ggplot(mean_data_theft_robbery,
     title    = "Mean Thefts & Robberies Over Time",
     x        = "Month",
     y        = "Mean thefts & robberies",
-    color    = "First treatment period",
+    color    = "Treatment cohort",
     caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
   ) +
   theme_bw()
@@ -637,7 +637,7 @@ ggplot(mean_data_theft_robbery,
     title    = "Mean Thefts & Robberies Over Time",
     x        = "Month",
     y        = "Mean thefts & robberies",
-    color    = "First treatment period",
+    color    = "Treatment cohort",
     caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
   ) +
   theme_bw()
@@ -796,9 +796,6 @@ ggplot(mean_data_theft_robbery,
            y = adjusted_mean_theft_robbery,
            color = group,
            group = group)) +
-  annotate("rect", xmin = 19.5, xmax = 24.5,
-           ymin = -Inf, ymax = Inf,
-           fill = "grey90", alpha = 0.5) +
   geom_line(linewidth = 0.75, alpha = 0.9) +
   geom_point(size = 1.5) +
   scale_color_manual(
@@ -825,13 +822,13 @@ ggplot(mean_data_theft_robbery,
     title    = "Mean Thefts & Robberies Over Time by Group",
     x        = "Month",
     y        = "Mean thefts & robberies",
-    color    = "First treatment period",
+    color    = "Treatment cohort",
     caption  = "Each series shifted to have the same mean count from Jan-2015 to Jul-2016 (= overall mean in the period)"
   ) +
   theme_bw()
 
 # save it
-ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg.png", width = 8, height = 6)
+ggsave("Crime and night tubes/Output/Figures/mean_theft_robbery_over_time_disagg.png", width = 10, height = 6)
 
 
 ################################################################
@@ -864,6 +861,7 @@ p1 <- ggplot(mean_data,
            y = mean_theft_robbery,
            color = as.factor(within_1km),
            group = as.factor(within_1km))) +
+  geom_vline(xintercept = 20, linetype = "dashed", color = "grey50", linewidth = 1) +
   geom_line(linewidth = 0.75, alpha = 0.9) +
   geom_point(size = 1.5) +
   scale_color_manual(
@@ -890,6 +888,7 @@ p2 <- ggplot(mean_data,
            y = mean_total_crime,
            color = as.factor(within_1km),
            group = as.factor(within_1km))) +
+  geom_vline(xintercept = 20, linetype = "dashed", color = "grey50", linewidth = 1) +
   geom_line(linewidth = 0.75, alpha = 0.9) +
   geom_point(size = 1.5) +
   scale_color_manual(
@@ -1033,8 +1032,14 @@ distance_vars <- c(
   "min_nt_victoria_dist"
 )
 
+# ensure unique location observations by filtering to the first period for each location
+final_data_filtered <- final_data %>%
+  group_by(location) %>%
+  filter(period == min(period)) %>%
+  ungroup()
+
 # make a summary function that gets the stats we want
-nrows <- length(final_data$min_any_dist)
+nrows <- length(final_data_filtered$min_any_dist)
 calc_summary_distance <- function(x) {
   x <- x[!is.na(x)]
   tibble(
@@ -1049,14 +1054,14 @@ calc_summary_distance <- function(x) {
 
 # get the summary stats
 panel_distance <- map_dfr(distance_vars, ~{
-  calc_summary_distance(final_data[[.x]]) %>%
+  calc_summary_distance(final_data_filtered[[.x]]) %>%
     mutate(Variable = .x, .before = 1)
 })
 
 # make the names nicer
 panel_distance$Variable <- panel_distance$Variable %>%
   str_replace_all("min_nt_", "Min distance to night tube ") %>%
-  str_replace_all("min_any_dist", "Min distance to any night tube") %>%
+  str_replace_all("min_any_dist", "Min distance to any tube station") %>%
   str_replace_all("_dist", " station") %>%
   str_replace_all("_", " ") %>%
   str_to_title()
