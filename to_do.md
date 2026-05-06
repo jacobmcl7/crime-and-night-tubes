@@ -4,7 +4,6 @@ next things to do:
 
  - final bits for submission
     - look through and make any remaining edits
-    - cut words
     - check we have fit with marking criteria
     - redo controls estimation with BJS/A+S
     - make graphs and tables nicer in appendix - formatting, titles, descriptions
