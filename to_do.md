@@ -30,6 +30,8 @@ next things to do:
 
 -------- NON-URGENT EXTRAS
 
+ - get in more data!! easy to do - take other three year periods
+
  - sort out issues with the covariance matrix not being positive def in the estimation with controls
 
  - determine asymptotic normality of density estimator
