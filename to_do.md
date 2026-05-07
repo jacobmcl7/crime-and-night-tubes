@@ -3,16 +3,16 @@ to do list:
 next things to do:
 
  - final bits for submission
-    - look through and make any remaining edits
     - check we have fit with marking criteria
-    - redo controls estimation with BJS/A+S
     - make graphs and tables nicer in appendix - formatting, titles, descriptions
+    - read through and make any remaining edits
     - correct violations of the new plot function in the code
-    - choose the appropriate k to run BJS regressions with
 
 
  - things to do if more time
+    - choose the appropriate k to run BJS regressions with
     - talk about magnitude of local effects
+    - redo controls estimation with BJS/A+S
     - do Conley TWFE/A+S for extra robustness (with various kernels)
     - check through estimator theory more, incorporate Robinson results in more detail
 
