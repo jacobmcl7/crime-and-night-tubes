@@ -1754,7 +1754,7 @@ dpik(second_stage_data$min_active_dist)
 ggplot(model_kerns_all, aes(x = x, y = y)) +
   geom_line(color = "blue", size = 1.5) +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
+  labs(title = "Treatment Effect Decay with Distance (face-to-face crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
   theme_bw()
@@ -1821,8 +1821,8 @@ ggplot() +
   geom_line(data = model_kerns_0, aes(x = x, y = y, color = "0-5 months"), size = 1) +
   geom_line(data = model_kerns_6, aes(x = x, y = y, color = "6-11 months"), size = 1) +
   geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-17 months"), size = 1) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (face-to-face crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect",
        color = "Event Time") +
@@ -1864,8 +1864,8 @@ ggplot() +
   geom_line(data = model_kerns_9, aes(x = x, y = y, color = "9-11 months"), size = 1) +
   geom_line(data = model_kerns_12, aes(x = x, y = y, color = "12-14 months"), size = 1) +
   geom_line(data = model_kerns_15, aes(x = x, y = y, color = "15-17 months"), size = 1) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
+  geom_hline(yintercept = 0, linetype = "solid", color = "black") +
+  labs(title = "Treatment Effect Decay with Distance (face-to-face crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect",
        color = "Event Time") +
@@ -2139,7 +2139,7 @@ dpik(second_stage_data$min_active_dist_all)
 ggplot(model_kerns_all, aes(x = x, y = y)) +
   geom_line(color = "blue", size = 1.5) +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
+  labs(title = "Treatment Effect Decay with Distance (face-to-face crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
   theme_bw()
@@ -2189,7 +2189,7 @@ dpik(second_stage_data$min_active_dist_all)
 ggplot(model_kerns_all, aes(x = x, y = y)) +
   geom_line(color = "blue", size = 1.5) +
   geom_hline(yintercept = 0, linetype = "solid", color = "black") +
-  labs(title = "Treatment Effect Decay with Distance (T&R)",
+  labs(title = "Treatment Effect Decay with Distance (face-to-face crimes)",
        x = "Distance from Station (km)",
        y = "Treatment Effect") +
   theme_bw()
@@ -2240,8 +2240,9 @@ for (crime in crime_types_bjs) {
       xsequence = seq(-10, 15, 5), 
       ymin = -0.1,
       ymax = 0.1,
-      title = paste0("BJS (2024), wealth difference, ", gsub("_", " ", crime)), 
-      note = "Simple treatment definition, theshold = 1km"))
+      xlab = "Event Time)",
+      ylab = "Difference in ATT (rich - poor)",
+      title = paste0(tools::toTitleCase(gsub("_", " ", crime)))))
   
   # print a message to indicate completion
   print(paste0("Done for ", crime))
