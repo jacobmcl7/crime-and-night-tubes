@@ -80,6 +80,26 @@ esttab using "Crime and night tubes EXTRA DATA\BJS results\BJS_results_theft_and
  *Convergence of standard errors is not achieved for coefs - try increasing the tolerance or number of iterations
 
 
+*4b) do 4) again, but specifically now to save the coefficient estimates and export them to a vector for plotting
+
+*do the regression, with no standard errors and saved treatment effect estimates
+did_imputation log_theft_and_robbery location period first_treatment_1, allhorizons nose saveestimates(tauhat)
+
+*export the data for plotting
+
+preserve
+*keep relevant variables, then keep only variables experiencing treatment
+keep location month tauhat treatment_1 msoa21nm lsoa11nm
+keep if treatment_1 == 1
+*export
+export delimited using "Crime and night tubes EXTRA DATA\BJS results\BJS_TE_estimates.csv", replace
+restore
+
+
+
+
+
+
 *4) now do it for rich vs poor areas
 
 *calculate median IMD only over treated locations
